@@ -243,7 +243,7 @@ getPaths <- function(final_long_df, final_short_df, tree){
         }
         local_paths[index] <- final_short_df[row_num, 2]
         local_paths <- as.character(local_paths)
-        paths[row_num] <- paste(unique(local_paths), collapse=',')
+        paths[row_num] <- paste(unique(local_paths), collapse=';')
     }# end outer for
     # Set Path column
     lowest_cut <- final_short_df[as.integer(final_short_df$TreeLevel) == min(as.integer(final_short_df$TreeLevel)),]
@@ -274,20 +274,20 @@ getClusterPaths <- function(clusters){
             # Determine all paths in the next level
             next_level <- clusters[clusters$TreeLevel == levels[rev_index-1],]$Path
             # Get the split path
-            split_string <- strsplit(as.character(paths[i]),',')
+            split_string <- strsplit(as.character(paths[i]),';')
             # for existing paths, find preceeding cluster and append to path
             if (length(split_string[[1]]) >= 2){
                 for (j in 1:length(next_level)){
                     if (grepl(split_string[[1]][1], next_level[j])){
-                        next_cluster <- strsplit(as.character(next_level[j]),',')[[1]][1]
+                        next_cluster <- strsplit(as.character(next_level[j]),';')[[1]][1]
                         if (!startsWith(paths[i], next_cluster)){
-                            paths[i] <- paste(next_cluster, paths[i], sep=",")
+                            paths[i] <- paste(next_cluster, paths[i], sep=";")
                         }
                     }
                 }# end j-for
                 # for new/opening paths, add path to paths
                 for (j in 1:length(next_level)){
-                    first_occur <- strsplit(as.character(next_level[j]), ',')[[1]]
+                    first_occur <- strsplit(as.character(next_level[j]), ';')[[1]]
                     if (! is.na(first_occur[2])){
                         if (! any( grepl( first_occur[2], paths) ) ){
                             paths <- c(paths, as.character(next_level[j]))
@@ -319,7 +319,7 @@ reduceClusterPaths <- function(paths, clusters, percentiles, tree){
     # For each node in a path, determine the MRCAs and if they repeat
     for (i in 1:length(paths)){
         # For path in paths, get clusters
-        clust_vector <- strsplit(paths[i],',')[[1]]
+        clust_vector <- strsplit(paths[i],';')[[1]]
         if (length(clust_vector) > 1){
             temp_mrcas <- c(length(clust_vector))
             # For cluster in path, get MRCAs
@@ -364,7 +364,7 @@ reduceClusterPaths <- function(paths, clusters, percentiles, tree){
         } else {
             clean_path <- paths[i]
         }
-        new_paths[i] <- paste(clean_path, collapse = ",")
+        new_paths[i] <- paste(clean_path, collapse = ";")
     }
     return(unique(new_paths))
 }# end reduceClusterPaths
@@ -386,14 +386,14 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
     n <- length(paths)
     clust_count <- 0
     for (i in 1:n){
-        clust_count <- clust_count + length(strsplit(paths[i],',')[[1]])
+        clust_count <- clust_count + length(strsplit(paths[i],';')[[1]])
     }
     cols <- palette(rainbow(n))
     new_cols <- c(clust_count)
     all_node_paths <- c(clust_count)
     index <- 1
     for (i in 1:n){
-        each_node <- strsplit(paths[i],',')[[1]]
+        each_node <- strsplit(paths[i],';')[[1]]
         for (j in 1:length(each_node)){
             all_node_paths[index] <- each_node[j]
             if (j == 1){
@@ -410,8 +410,8 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
     clust_height <- as.character(clusters$MRCAHeight)
     index <- 1
     for (i in 1:n){
-        for (j in 1:length(strsplit(paths[i],',')[[1]])){
-            clust_vector <- clusters[as.character(clusters$ClusterName) == strsplit(paths[i],',')[[1]][j],]
+        for (j in 1:length(strsplit(paths[i],';')[[1]])){
+            clust_vector <- clusters[as.character(clusters$ClusterName) == strsplit(paths[i],';')[[1]][j],]
             gg <- gg + geom_hilight(clust_vector$MRCANode, fill = new_cols[index], alpha = 0.2)
             index <- index + 1
         }
@@ -419,7 +419,7 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
     repeat_node <- c(n)
     index <- 1
     for (i in 1:n){
-        nodes <- strsplit(paths[i],',')[[1]]
+        nodes <- strsplit(paths[i],';')[[1]]
         last_node <- nodes[length(nodes)]
         clust_vector <- clusters[as.character(clusters$ClusterName) == last_node,]
         if (any(grepl(pattern = clust_vector$MRCANode, x = repeat_node))){
@@ -440,7 +440,7 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
     # Generate paths reflecting reduction
     remaining_nodes <- c(sum(lengths(regmatches(paths, gregexpr("c", paths)))))
     for (i in 1:length(paths)){
-        remaining_nodes <- c(remaining_nodes, strsplit(paths[i], ",")[[1]]) 
+        remaining_nodes <- c(remaining_nodes, strsplit(paths[i], ";")[[1]]) 
     }
     repeat_column <- c(length(clusters$ClusterName))
     old_paths <- as.character(clusters$Path)
@@ -448,7 +448,7 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
         if (clusters$ClusterName[i] %in% remaining_nodes){
             repeat_column[i] <- "-"
         } else {
-            split_path <- strsplit(old_paths[i], ",")[[1]]
+            split_path <- strsplit(old_paths[i], ";")[[1]]
             repeat_column[i] <- split_path[length(split_path)-1]}
     }
     clusters$RepeatCluster <- repeat_column
@@ -466,7 +466,7 @@ generateLeafColumn <- function(percentiles, final_clusters){
         filename <- paste("./treeSlices/phylopart",percentiles[i],".csv", sep="")
         temp_df <- read.csv(filename, header=TRUE)
         for (j in 1:length(clusters)){
-            all_leaves[index] <- paste(as.character(temp_df[temp_df$clustername == clusters[j],]$leafname), sep="", collapse=",")
+            all_leaves[index] <- paste(as.character(temp_df[temp_df$clustername == clusters[j],]$leafname), sep="", collapse=";")
             index <- index + 1
         }
     }
