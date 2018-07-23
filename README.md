@@ -44,11 +44,7 @@ For example, a 10 slice tree will result in:
 * <b>tree.pdf</b>: Plot of dichotomous tree
 * <b>cluster_tree.pdf</b>: Plot of tree with colored clusters
 
-<object data="./Images/cluster_tree.pdf" type="application/pdf" width="700px" height="700px">
-    <embed src="./Images/cluster_tree.pdf">
-        <p>This browser does not support PDFs. Please download the PDF to view it: <a href="./Images/cluster_tree.pdf">Download PDF</a>.</p>
-    </embed>
-</object>
+![Alt text](./Images/cluster_tree.png?raw=true "Clustered Tree")
 
 ### treeSlices (intermediate files)
 * phylopart0.1.csv                Results from PhyloPart at 10th percentile
