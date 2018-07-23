@@ -1,3 +1,4 @@
+<link href="./markdown.css" rel="stylesheet"></link>
 # HIVdynamite (BETA)
 dynamic identification of transmission clusters in phylogenies
 
@@ -78,10 +79,6 @@ For example, a 10 slice tree will result in 3 directories containing:
  | 10 | 0.01782 | c10.11 | 3 | 0.98 | c6.1 | c7.8 | c8.8 | c9.8 | c10.11 | -3.29374770216132 | 0.1283605 | 246 | 0.0896005 | 47.9902161881836 | 0.1074205 | - | 19@15_3 | 20@15_3 | 113@86_0 |
  | 10 | 0.0176 | c10.12 | 3 | 0.999 | c6.1 | c7.8 | c8.8 | c9.9 | c10.12 | -3.29374770216132 | 0.1283605 | 249 | 0.0999805 | 47.9902161881836 | 0.1175805 | - | 17@14_3 | 100@73_0 | 18@14_3 |
 </div>
-.hiv_table table {
-  height: 500px;
-  overflow-y: scroll;
-}
 
 ### treeFigures
 * <b>losalamos_small.nwk.LTT.pdf</b>: Lineage-through-time plot with extant and extinct lineages -- conducts γ-test of Pybus & Harvey (2000).
