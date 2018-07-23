@@ -29,36 +29,22 @@ plotClusters(percentiles, node_tree_file="./treeFigures/node_tree.nwk",
              width = 16, height = 16, units = "in", dpi = 600)
 ```
 
-Node enumeration:
-By convention, the tips of the tree are numbered 1 through n for n tips; and the nodes are numbered n + 1 through n + m for m nodes. m = n - 1 for a fully bifurcating tree. So, if there are 10 leaves, then the root number is 11. From the root (11), nodes are enumerated in a depth-first manner (This follows the convention of the R package ape numbering scheme).
-
-![Alt text](./Images/numbering_example.png?raw=true "Numbered Tree")
-
-This example image may be generated using:
-
-```R
-library(ape)
-
-tree <- read.tree(text = "(((A,B),(C,D)),(E,F));")
-plot(tree, edge.width = 2, label.offset = 0.1)
-nodelabels()
-tiplabels()
-```
-
-
 ## Output
 
 For example, a 10 slice tree will result in:
 
-treeFigures
-* losalamos_small.nwk.LTT.pdf     Lineage-through-time plot with extant and extinct lineages -- conducts γ-test of Pybus & Harvey (2000).
-* node_tree.nwk                   Tree with node identifiers
-* node_tree.pdf                   Plot of tree with node identifiers
-* tree.nwk                        Original tree with polytomies resolved to dichotomies
-* tree.pdf                        Plot of dichotomous tree
-* cluster_tree.pdf                Plot of tree with colored clusters
+### treeTables
+* <b>HIVdynamite.csv</b>                 Final table with cluster paths and repeats identified
 
-treeSlices
+### treeFigures
+* <b>losalamos_small.nwk.LTT.pdf</b>: Lineage-through-time plot with extant and extinct lineages -- conducts γ-test of Pybus & Harvey (2000).
+* <b>node_tree.nwk</b>: Tree with node identifiers
+* <b>node_tree.pdf</b>: Plot of tree with node identifiers
+* <b>tree.nwk</b>: Original tree with polytomies resolved to dichotomies
+* <b>tree.pdf</b>: Plot of dichotomous tree
+* <b>cluster_tree.pdf</b>: Plot of tree with colored clusters
+
+### treeSlices (intermediate files)
 * phylopart0.1.csv                Results from PhyloPart at 10th percentile
 * phylopart0.2.csv                20th percentile
 * phylopart0.3.csv                ...
@@ -97,6 +83,20 @@ treeSlices
 * renamed_leaves0.9.csv           ...
 * renamed_leaves1.csv             ...
 
-treeTables
-* HIVdynamite.csv                 Final table with cluster paths and repeats identified
+## Notes
+### Node enumeration
+By convention, the tips of the tree are numbered 1 through n for n tips; and the nodes are numbered n + 1 through n + m for m nodes. m = n - 1 for a fully bifurcating tree. So, if there are 6 leaves, then the root number is 7. From the root (7), nodes are enumerated in a depth-first manner (This follows the convention of the R package ape numbering scheme).
+
+![Alt text](./Images/numbering_example.png?raw=true "Numbered Tree")
+
+This example image may be generated using:
+
+```R
+library(ape)
+
+tree <- read.tree(text = "(((A,B),(C,D)),(E,F));")
+plot(tree, edge.width = 2, label.offset = 0.1)
+nodelabels()
+tiplabels()
+```
 
