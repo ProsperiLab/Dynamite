@@ -32,7 +32,7 @@ plotClusters(percentiles, node_tree_file="./treeFigures/node_tree.nwk",
 Node enumeration:
 By convention, the tips of the tree are numbered 1 through n for n tips; and the nodes are numbered n + 1 through n + m for m nodes. m = n - 1 for a fully bifurcating tree. So, if there are 10 leaves, then the root number is 11. From the root (11), nodes are enumerated in a depth-first manner (This follows the convention of the R package ape numbering scheme).
 
-![NumberedTree](./Images/numbering_example.png)
+![Alt text](./Images/numbering_example.png?raw=true "Numbered Tree")
 
 This example image may be generated using:
 
