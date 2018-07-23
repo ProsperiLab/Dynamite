@@ -1,4 +1,5 @@
 <link href="./markdown.css" rel="stylesheet"></link>
+
 # HIVdynamite (BETA)
 dynamic identification of transmission clusters in phylogenies
 
@@ -37,7 +38,6 @@ For example, a 10 slice tree will result in 3 directories containing:
 ### treeTables
 * <b>HIVdynamite.csv</b>: Primary output consisting of a final table with cluster paths and repeats identified
 
-<div class="hiv_table">
  | TreeLevel | MedianOfDistances | ClusterName | SequencesPerCluster | Bootstrap | Path | PybusGamma | CutHeight | MRCANode | MRCAHeight | SpeciationRate | PhyloDiversity | RepeatCluster | Leaves |
  | --------- | ----------------- | ----------- | ------------------- | --------- | ---- | ---------- | --------- | -------- | ---------- | -------------- | -------------- | ------------- | ------ |
  | 6 | 0.00349160000000001 | c6.1 | 5 | 0.9999 | c6.1 | 4.06535504585726 | 0.0770163 | 232 | 0.0752705 | 93.4310414402262 | 0.0810695 | - | 234 | 235 | 238 | 244 | 251 |
@@ -78,7 +78,6 @@ For example, a 10 slice tree will result in 3 directories containing:
  | 10 | 0 | c10.10 | 2 | 0.9999 | c6.1 | c7.8 | c8.7 | c10.10 | -3.29374770216132 | 0.1283605 | 243 | 0.1194505 | 47.9902161881836 | 0.1194505 | - | 23@18_4 | 105@78_0 |
  | 10 | 0.01782 | c10.11 | 3 | 0.98 | c6.1 | c7.8 | c8.8 | c9.8 | c10.11 | -3.29374770216132 | 0.1283605 | 246 | 0.0896005 | 47.9902161881836 | 0.1074205 | - | 19@15_3 | 20@15_3 | 113@86_0 |
  | 10 | 0.0176 | c10.12 | 3 | 0.999 | c6.1 | c7.8 | c8.8 | c9.9 | c10.12 | -3.29374770216132 | 0.1283605 | 249 | 0.0999805 | 47.9902161881836 | 0.1175805 | - | 17@14_3 | 100@73_0 | 18@14_3 |
-</div>
 
 ### treeFigures
 * <b>losalamos_small.nwk.LTT.pdf</b>: Lineage-through-time plot with extant and extinct lineages -- conducts γ-test of Pybus & Harvey (2000).
