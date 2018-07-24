@@ -486,7 +486,7 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
     }
     # Check tree has node labels
     if (is.null(tree$node.label)){
-        tree$node.label <- rep_len(0.999, tree$Nnode)
+        tree$node.label <- rep_len(1, tree$Nnode)
     }    
     # Resolve Multichotomies
     tree <- multi2di(tree, random = FALSE)
