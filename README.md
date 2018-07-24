@@ -170,12 +170,14 @@ Leaf names may be changed to the corresponding node (as seen by leaf 160) or if 
 
 ### Java error
 Phylogenetic tree formatting may cause issues when running HIVdynamite. An example error:
-```Exception in thread "main" java.lang.Exception: Error while parsing tree: parsed tree is different form the one in the file.```
+```Java
+Exception in thread "main" java.lang.Exception: Error while parsing tree: parsed tree is different form the one in the file.
+```
 
 One possible solution involves checking the parentheses around the tree. 
 
-Fails: (122:0.2245,148:0.2245):1.000;
-Works: ((122:0.2245,148:0.2245):1.000);
+**Fails**: (122:0.2245,148:0.2245):1.000;
+**Works**: ((122:0.2245,148:0.2245):1.000);
 
 Otherwise, be sure the tree format matches the description in PhyloPart_README.txt
 
