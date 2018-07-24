@@ -97,7 +97,7 @@ protectMetachar <- function(x)
 # Function to plot trees
 treePlot <- function(tree, percentiles){
     # Generate PDF image
-    write.tree(tree, "tree.nwk", tree.names=TRUE)
+    write.tree(tree, "./treeFigures/tree.nwk", tree.names=TRUE)
     gg <- ggtree(tree, ladderize=T)
     # Add percentile slices across the plot
     for (i in 1:length(percentiles)){
@@ -106,10 +106,10 @@ treePlot <- function(tree, percentiles){
     tree_height <- max(nodeHeights(tree))
     gg <- gg + geom_nodelab(cex=2)
     gg <- gg + geom_tiplab(cex=2) + xlim(0, max(gg$data$x) + 0.15*max(gg$data$x))
-    ggsave(gg, file="tree.pdf")
+    ggsave(gg, file="./treeFigures/tree.pdf")
     
     node_tree <- treeSlice(tree, tree_height+1, orientation="rootwards")
-    write.tree(node_tree, "node_tree.nwk", tree.names=TRUE)
+    write.tree(node_tree, "./treeFigures/node_tree.nwk", tree.names=TRUE)
     # Plot node_tree with slices
     gg <- ggtree(node_tree, ladderize=T)
     for (i in 1:length(percentiles)){
@@ -117,7 +117,7 @@ treePlot <- function(tree, percentiles){
     }
     gg <- gg + geom_nodelab(cex=2) 
     gg <- gg + geom_tiplab(cex=2) + xlim(0, max(gg$data$x) + 0.1*max(gg$data$x))
-    ggsave(gg, file="node_tree.pdf")
+    ggsave(gg, file="./treeFigures/node_tree.pdf")
 }# end treePlot
 
 # Function to generate percentiles based upon the number of desired slices
@@ -485,28 +485,27 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
         write("Tree not rooted. Must provide rooted tree.", stderr())
         quit(status=1)
     }
+    # Check tree has node labels
+    if (is.null(tree$node.label)){
+        tree$node.label <- rep.int(1, tree$Nnode)
+    }    
     # Resolve Multichotomies
     tree <- multi2di(tree, random = FALSE)
-    # Plot main tree and node tree
-    treePlot(tree, percentiles)
-    # Check tree height
-    height <- max(nodeHeights(tree))
-    # Plot Lineage-through-time plot
-    pdf(paste(filename, ".LTT.pdf", sep=""))
-    ltt(tree, gamma=TRUE)
-    dev.off()
-    # Initialize list of quality DataFrames
-    quality_percentiles <- list()
     # Make directory for treeSlices
     dir.create(file.path(".","treeSlices"))
     dir.create(file.path(".","treeFigures"))
     dir.create(file.path(".","treeTables"))
-    # Move tree files
-    file.rename(from=paste(filename, ".LTT.pdf", sep=""), to=paste("./treeFigures/",filename,".LTT.pdf",sep=""))
-    file.rename(from="node_tree.pdf", to="./treeFigures/node_tree.pdf")
-    file.rename(from="tree.pdf", to="./treeFigures/tree.pdf")
-    file.rename(from="node_tree.nwk", to="./treeFigures/node_tree.nwk")
-    file.rename(from="tree.nwk", to="./treeFigures/tree.nwk")
+    # Plot main tree and node tree
+    treePlot(tree, percentiles)
+    # Check tree height
+    height <- max(nodeHeights(tree))
+    # Initialize list of quality DataFrames
+    quality_percentiles <- list()
+    # Plot Lineage-through-time plot
+    pdf(paste("./treeFigures/",filename, ".LTT.pdf", sep=""))
+    ltt(tree, gamma=TRUE)
+    dev.off()
+    
     phylogenetic_diversity = c()
     # Check JAR system call using percentiles -- may need to alter JAR path
     for (x in 1:length(percentiles)){
