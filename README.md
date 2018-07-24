@@ -169,13 +169,13 @@ Since clusters are generated from slices taken across the original tree, leaf na
 Leaf names may be changed to the corresponding node (as seen by leaf 160) or if the cut is along the branch leading to the leaf, the name becomes *LeafName$HeightFromNode-MRCANode* to indicate that the leaf in that cluster represents an ancestral state.
 
 ## References
-Paradis E., Claude J. & Strimmer K. 2004. APE: analyses of phylogenetics and evolution in R language. Bioinformatics 20: 289-290. 
+Paradis E, Claude J & Strimmer K (2004). APE: analyses of phylogenetics and evolution in R language. Bioinformatics 20: 289-290.
 
-Ross Ihaka, Paul Murrell, Kurt Hornik, Jason C. Fisher, Achim Zeileis (2016). colorspace: Color Space Manipulation.
+Ihaka R, Murrell P, Hornik K, Fisher JC, Zeileis A (2016). colorspace: Color Space Manipulation. R package version 1.3-2. URL https://CRAN.R-project.org/package=colorspace
 
 Yu G, Smith D, Zhu H, Guan Y, Lam TT (2017). ggtree: an R package for visualization and annotation of phylogenetic trees with their covariates and other associated data. Methods in Ecology and Evolution, 8, 28-36.
 
-Revell, L. J. (2012) phytools: An R package for phylogenetic comparative biology (and other things). Methods Ecol. Evol. 3 217-223.
+Revell, LJ (2012). phytools: An R package for phylogenetic comparative biology (and other things). Methods Ecol. Evol. 3 217-223.
 
-S.W. Kembel, P.D. Cowan, M.R. Helmus, W.K. Cornwell, H. Morlon, D.D. Ackerly, S.P. Blomberg, and C.O. Webb. 2010. Picante: R tools for integrating phylogenies and ecology. Bioinformatics 26:1463-1464. 
+Kembel SW, Cowan PD, Helmus MR, Cornwell WK, Morlon H, Ackerly DD, Blomberg SP, and Webb CO (2010). Picante: R tools for integrating phylogenies and ecology. Bioinformatics 26:1463-1464. 
 
