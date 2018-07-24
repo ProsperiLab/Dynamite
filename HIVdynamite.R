@@ -49,8 +49,7 @@ checkAndConvertTree <- function(filename, percentiles){
     } else if (endsWith(filename, "nex") || endsWith(filename,"nexus") || endsWith(filename, "nxs")){
         write("Nexus file detected",stderr())
         # If file is Nexus format, the Java program can't read it.
-        # So, we load the library 'ape' to read Nexus and write Newick
-        library(ape, quietly=TRUE)
+        # So, we use the library 'ape' to read Nexus and write Newick
         nexus_tree <- read.nexus(filename)
         nexus_name <- paste(removeExt(c(filename)),"converted.nwk",sep=".")
         write.tree(nexus_tree, file=nexus_name)
@@ -487,7 +486,7 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
     }
     # Check tree has node labels
     if (is.null(tree$node.label)){
-        tree$node.label <- rep.int(1, tree$Nnode)
+        tree$node.label <- rep_len(0.999, tree$Nnode)
     }    
     # Resolve Multichotomies
     tree <- multi2di(tree, random = FALSE)
