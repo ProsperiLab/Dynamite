@@ -38,20 +38,20 @@ For example, a 10 slice tree will result in 3 directories containing:
 
 This table (depicted below) contains 14 columns:
 
-- TreeLevel - the percentile cut height at which the current cluster occurs
-- MedianOfDistance - median of patristic distances in the cluster
-- ClusterName - the name of the current cluster
-- SequencesPerCluster - number of leaves in the current cluster
-- Bootstrap - the bootstrap score of the current cluster
-- Path - the clusters at lower cuts (closer to root) containing the current cluster
-- PybusGamma - result of the γ-test of Pybus & Harvey (2000).
-- CutHeight - the height of the cut along the full-length tree
-- MRCANode - the node representing the most recent common ancestor (MRCA) of the current cluster
-- MRCAHeight - the height from the MRCANode
-- SpeciationRate - measure of speciation rate generated using **yule** from the ape package
-- PhyloDiversity - measure of phylogenetic diversity  generated using **pd** from the picante package
-- RepeatCluster - indicates identical clusters occurring at lower cuts
-- Leaves - names of the leaves within the current cluster
+- **TreeLevel** - the percentile cut height at which the current cluster occurs
+- **MedianOfDistance** - median of patristic distances in the cluster
+- **ClusterName** - the name of the current cluster
+- **SequencesPerCluster** - number of leaves in the current cluster
+- **Bootstrap** - the bootstrap score of the current cluster
+- **Path** - the clusters at lower cuts (closer to root) containing the current cluster
+- **PybusGamma** - result of the γ-test of Pybus & Harvey (2000).
+- **CutHeight** - the height of the cut along the full-length tree
+- **MRCANode** - the node representing the most recent common ancestor (MRCA) of the current cluster
+- **MRCAHeight** - the height from the MRCANode
+- **SpeciationRate** - measure of speciation rate generated using **yule** from the ape package
+- **PhyloDiversity** - measure of phylogenetic diversity  generated using **pd** from the picante package
+- **RepeatCluster** - indicates identical clusters occurring at lower cuts
+- **Leaves** - names of the leaves within the current cluster
 
  | TreeLevel | MedianOfDistances | ClusterName | SequencesPerCluster | Bootstrap | Path | PybusGamma | CutHeight | MRCANode | MRCAHeight | SpeciationRate | PhyloDiversity | RepeatCluster | Leaves |
  | --------- | ----------------- | ----------- | ------------------- | --------- | ---- | ---------- | --------- | -------- | ---------- | -------------- | -------------- | ------------- | ------ |
