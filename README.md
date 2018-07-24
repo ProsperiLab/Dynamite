@@ -188,6 +188,8 @@ Ihaka R, Murrell P, Hornik K, Fisher JC, Zeileis A (2016). colorspace: Color Spa
 
 Yu G, Smith D, Zhu H, Guan Y, Lam TT (2017). ggtree: an R package for visualization and annotation of phylogenetic trees with their covariates and other associated data. Methods in Ecology and Evolution, 8, 28-36.
 
+Ritchie ME, Phipson B, Wu D, Hu Y, Law CW, Shi W, Smyth GK (2015). limma powers differential expression analyses for RNA-sequencing and microarray studies. Nucleic Acids Research, 43(7), e47. 
+
 Revell, LJ (2012). phytools: An R package for phylogenetic comparative biology (and other things). Methods Ecol. Evol. 3 217-223.
 
 Kembel SW, Cowan PD, Helmus MR, Cornwell WK, Morlon H, Ackerly DD, Blomberg SP, and Webb CO (2010). Picante: R tools for integrating phylogenies and ecology. Bioinformatics 26:1463-1464. 
