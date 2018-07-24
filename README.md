@@ -102,7 +102,7 @@ This table (depicted below) contains 14 columns:
 * **tree.pdf**: Plot of dichotomous tree
 * **cluster_tree.pdf**: Plot of tree with colored clusters
 
-**Figure cluster_tree.pdf**
+**Figure cluster_tree.pdf**. Grey vertical lines represent the percentile cut heights along the tree. Clusters sharing a path are represented by different shades of the same color. Clade name represents the cluster path for the corresponding cluster. Repeated clusters are not represented. Coloring begins at the MRCA of the cluster not at the slice height.
 ![Alt text](./Images/cluster_tree.png?raw=true "Clustered Tree")
 
 ### treeSlices (intermediate files)
@@ -167,3 +167,15 @@ Since clusters are generated from slices taken across the original tree, leaf na
 **13@11_2$0.00943185-161;150;107@80_0$0.01647185-217;160;**
 
 Leaf names may be changed to the corresponding node (as seen by leaf 160) or if the cut is along the branch leading to the leaf, the name becomes *LeafName$HeightFromNode-MRCANode* to indicate that the leaf in that cluster represents an ancestral state.
+
+## References
+Paradis E., Claude J. & Strimmer K. 2004. APE: analyses of phylogenetics and evolution in R language. Bioinformatics 20: 289-290. 
+
+Ross Ihaka, Paul Murrell, Kurt Hornik, Jason C. Fisher, Achim Zeileis (2016). colorspace: Color Space Manipulation.
+
+Yu G, Smith D, Zhu H, Guan Y, Lam TT (2017). ggtree: an R package for visualization and annotation of phylogenetic trees with their covariates and other associated data. Methods in Ecology and Evolution, 8, 28-36.
+
+Revell, L. J. (2012) phytools: An R package for phylogenetic comparative biology (and other things). Methods Ecol. Evol. 3 217-223.
+
+S.W. Kembel, P.D. Cowan, M.R. Helmus, W.K. Cornwell, H. Morlon, D.D. Ackerly, S.P. Blomberg, and C.O. Webb. 2010. Picante: R tools for integrating phylogenies and ecology. Bioinformatics 26:1463-1464. 
+
