@@ -343,18 +343,18 @@ reduceClusterPaths <- function(paths, clusters, percentiles, tree){
                 actual_dup_boolean <- c(length(slices))
                 actual_dup_boolean[1] <- FALSE
                 leaves <- getDescendants(tree, dup_mrcas[j])
+                # Get leaves from mrca
+                keep <- c(length(leaves))
+                for (tip in 1:length(leaves)){
+                    if (leaves[tip] < length(tree$tip.label)){
+                        keep[tip] <- TRUE
+                    } else {
+                        keep[tip] <- FALSE
+                    }
+                } # end inner for
+                leaves <- leaves[as.logical(keep)]
+                leaves <- tree$tip.label[leaves]
                 for (k in 2:length(slices)){
-                    # Get leaves from mrca
-                    keep <- c(length(leaves))
-                    for (tip in 1:length(leaves)){
-                        if (leaves[tip] < length(tree$tip.label)){
-                            keep[tip] <- TRUE
-                        } else {
-                            keep[tip] <- FALSE
-                        }
-                    } # end inner for
-                    leaves <- leaves[as.logical(keep)]
-                    leaves <- tree$tip.label[leaves]
                     actual_dup_boolean[k] <- as.logical(all(leaves %in% trees[[slices[k-1]]]$tip.label) & all(leaves %in% trees[[slices[k]]]$tip.label))
                 }
                 bad_clusters <- c(bad_clusters, dup_clusters[as.logical(actual_dup_boolean)])
@@ -465,7 +465,7 @@ generateLeafColumn <- function(percentiles, final_clusters){
         filename <- paste("./treeSlices/phylopart",percentiles[i],".csv", sep="")
         temp_df <- read.csv(filename, header=TRUE)
         for (j in 1:length(clusters)){
-            all_leaves[index] <- paste(as.character(temp_df[temp_df$clustername == clusters[j],]$leafname), sep="", collapse=";")
+            all_leaves[index] <- paste(sort(as.character(temp_df[temp_df$clustername == clusters[j],]$leafname)), sep="", collapse=";")
             index <- index + 1
         }
     }
