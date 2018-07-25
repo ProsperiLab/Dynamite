@@ -328,6 +328,11 @@ reduceClusterPaths <- function(paths, clusters, percentiles, tree){
             }
             # Get list of duplicated mrcas
             dup_mrcas <- unique(temp_mrcas[duplicated(temp_mrcas)]) # uniq set of duplicated mrcas
+            # if no duplicates, pass path and go to next
+            if (identical(integer(0), dup_mrcas)){
+                new_paths[i] <- paths[i]
+                next
+            }
             bad_clusters <- c()
             for (j in 1:length(dup_mrcas)){
                 # Determine indices of duplicated mrcas
