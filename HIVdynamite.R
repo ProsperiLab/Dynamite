@@ -412,10 +412,17 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
     gg <- ggtree(tree, ladderize=T)
     clust_vector <- as.character(clusters$MRCANode)
     clust_height <- as.character(clusters$MRCAHeight)
+    highlighted_clusters <- c()
     index <- 1
+    # For path in paths
     for (i in 1:n){
+        # For cluster in path
         for (j in 1:length(strsplit(paths[i],';')[[1]])){
             clust_vector <- clusters[as.character(clusters$ClusterName) == strsplit(paths[i],';')[[1]][j],]
+            if (clust_vector$MRCANode %in% highlighted_clusters){
+                index <- index + 1
+                next
+            }
             gg <- gg + geom_hilight(clust_vector$MRCANode, fill = new_cols[index], alpha = 0.2)
             index <- index + 1
         }
