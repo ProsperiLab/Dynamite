@@ -277,7 +277,7 @@ getClusterPaths <- function(clusters){
             # for existing paths, find preceeding cluster and append to path
             if (length(split_string[[1]]) >= 2){
                 for (j in 1:length(next_level)){
-                    if (grepl(split_string[[1]][1], next_level[j])){
+                    if (identical(split_string[[1]][1], next_level[j])){
                         next_cluster <- strsplit(as.character(next_level[j]),';')[[1]][1]
                         if (!startsWith(paths[i], next_cluster)){
                             paths[i] <- paste(next_cluster, paths[i], sep=";")
@@ -336,7 +336,7 @@ reduceClusterPaths <- function(paths, clusters, percentiles, tree){
             bad_clusters <- c()
             for (j in 1:length(dup_mrcas)){
                 # Determine indices of duplicated mrcas
-                dup_boolean <- grepl(dup_mrcas[j], temp_mrcas)
+                dup_boolean <- grepl(paste("^",dup_mrcas[j],"$",sep=""), temp_mrcas)
                 # Get clusters from dup_mrca indices
                 dup_clusters <- clust_vector[dup_boolean]
                 # Get slice number for duplicated cluster
@@ -424,6 +424,7 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
                 next
             }
             gg <- gg + geom_hilight(clust_vector$MRCANode, fill = new_cols[index], alpha = 0.2)
+            highlighted_clusters <- c(highlighted_clusters, clust_vector$MRCANode)
             index <- index + 1
         }
     }
@@ -585,7 +586,7 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
         write.csv(tip_table, paste("./treeSlices/renamed_leaves",percentiles[x],".csv",sep=""), row.names = FALSE)
         new_leaves <- c(length(df$leafname))
         for (i in 1:length(df$leafname)){
-            new_leaf_index <- grepl(df$leafname[i], tip_table$cut_tree.tip.label)
+            new_leaf_index <- grepl(paste("^",df$leafname[i], "$", sep=""), tip_table$cut_tree.tip.label)
             new_leaves[i] <- as.character(tip_table$cut_tree.tip.label)[as.logical(new_leaf_index)][1]
         }
         new_df <- df
@@ -627,7 +628,7 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
             cluster_leaves <- df[df$ClusterName == uniq_ids[i],]$LeafName
             for (j in 1:length(cut_tree$tip.label)){
                 for (k in 1:length(cluster_leaves)){
-                    if (grepl(cluster_leaves[k], cut_tree$tip.label[j])){
+                    if (identical(cluster_leaves[k], cut_tree$tip.label[j])){
                         community_matrix[i,j] <- 1
                     }
                 }
