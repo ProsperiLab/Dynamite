@@ -317,6 +317,10 @@ reduceClusterPaths <- function(paths, clusters, percentiles, tree){
     }
     # For each node in a path, determine the MRCAs and if they repeat
     for (i in 1:length(paths)){
+        if (is.null(paths[i])){
+            write("No clusters detected", stderr())
+            quit(status=0)
+        }
         # For path in paths, get clusters
         clust_vector <- strsplit(paths[i],';')[[1]]
         if (length(clust_vector) > 1){
