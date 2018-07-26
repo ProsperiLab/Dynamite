@@ -461,7 +461,12 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
             repeat_column[i] <- "-"
         } else {
             split_path <- strsplit(old_paths[i], ";")[[1]]
-            repeat_column[i] <- split_path[length(split_path)-1]}
+            if (length(split_path) > 1){
+                repeat_column[i] <- split_path[length(split_path)-1]
+            } else {
+                repeat_column[i] <- old_paths[i]
+            }
+        }
     }
     clusters$RepeatCluster <- repeat_column
     return(clusters)
