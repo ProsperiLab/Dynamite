@@ -121,7 +121,7 @@ treePlot <- function(tree, percentiles){
 
 # Function to generate percentiles based upon the number of desired slices
 percentilesFromSliceCount <- function(num_slices){
-    return(seq((1/num_slices),1,(1/num_slices)))
+    return(round(seq((1/num_slices),1,(1/num_slices)), 4))
 }# end percentiles_from_slice_count
 
 # Function to run previously build JAR file that performs actual clustering
