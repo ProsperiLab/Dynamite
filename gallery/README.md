@@ -7,9 +7,6 @@
 ## Cluster tree 2
 ![Alt text](./cluster_tree2.png?raw=true "Clustered Tree")
 
-## Cluster tree 3
-![Alt text](./cluster_tree3.png?raw=true "Clustered Tree")
-
 ## Cluster tree 4
 ![Alt text](./cluster_tree4.png?raw=true "Clustered Tree")
 
