@@ -634,7 +634,7 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
         rownames(community_matrix) <- uniq_ids
         colnames(community_matrix) <- cut_tree$tip.label
         for (i in 1:length(unique(uniq_ids))){
-            cluster_leaves <- df[df$ClusterName == uniq_ids[i],]$LeafName
+            cluster_leaves <- cut_tree$tip.label[df[df$ClusterName == uniq_ids[i],]$LeafName]
             for (j in 1:length(cut_tree$tip.label)){
                 for (k in 1:length(cluster_leaves)){
                     if (identical(cluster_leaves[k], cut_tree$tip.label[j])){
