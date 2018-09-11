@@ -389,6 +389,12 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
                          width = 16, height = 16, units = "in", dpi = 600){
     tree <- read.newick(node_tree_file)
     clusters <- read.csv(processed_tree_table)
+    if (length(clusters$TreeLevel) > 900){
+        plt_clusters <- FALSE
+        write("WARNING: Too many clusters. Cluster plot will not be generated.",stderr())
+    } else {
+        plt_clusters <- TRUE
+    }
     paths <- getClusterPaths(clusters)
     paths <- reduceClusterPaths(paths, clusters, percentiles, tree)
     n <- length(paths)
@@ -413,7 +419,9 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
             }
         }
     }
-    gg <- ggtree(tree, ladderize=T)
+    if (plt_clusters){
+        gg <- ggtree(tree, ladderize=T)
+    }
     clust_vector <- as.character(clusters$MRCANode)
     clust_height <- as.character(clusters$MRCAHeight)
     highlighted_clusters <- c()
@@ -427,7 +435,9 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
                 index <- index + 1
                 next
             }
-            gg <- gg + geom_hilight(clust_vector$MRCANode, fill = new_cols[index], alpha = 0.2)
+            if (plt_clusters){
+                gg <- gg + geom_hilight(clust_vector$MRCANode, fill = new_cols[index], alpha = 0.2)
+            }
             highlighted_clusters <- c(highlighted_clusters, clust_vector$MRCANode)
             index <- index + 1
         }
@@ -438,21 +448,22 @@ plotClusters <- function(percentiles, node_tree_file="./treeFigures/node_tree.nw
         nodes <- strsplit(paths[i],';')[[1]]
         last_node <- nodes[length(nodes)]
         clust_vector <- clusters[as.character(clusters$ClusterName) == last_node,]
-        if (any(grepl(pattern = clust_vector$MRCANode, x = repeat_node))){
+        if (any(grepl(pattern = clust_vector$MRCANode, x = repeat_node)) & plt_clusters){
             gg <- gg + geom_cladelabel(node = clust_vector$MRCANode, label = paths[i],
                                        align = T, fontsize = 2, offset.text = max(gg$data$x)*0.1)
-        } else{
+        } else if (plt_clusters){
             gg <- gg + geom_cladelabel(node = clust_vector$MRCANode, label = paths[i],
                                        align = T, fontsize = 2)
         }
         repeat_node[i] <- clust_vector$MRCANode
     }
-    
-    for (i in 1:length(percentiles)){
-        gg <- gg + geom_vline(xintercept = max(gg$data$x) * percentiles[i], color = "grey", size = 0.3)
+    if (plt_clusters){
+        for (i in 1:length(percentiles)){
+            gg <- gg + geom_vline(xintercept = max(gg$data$x) * percentiles[i], color = "grey", size = 0.3)
+        }
+        gg <- gg +  geom_nodelab(cex=2) + geom_tiplab(cex=2) + ggplot2::xlim(0, max(gg$data$x) + 0.15*max(gg$data$x))
+        ggsave(gg, file="./treeFigures/cluster_tree.pdf", dpi = dpi, width = width, height = height, units = units)
     }
-    gg <- gg +  geom_nodelab(cex=2) + geom_tiplab(cex=2) + ggplot2::xlim(0, max(gg$data$x) + 0.15*max(gg$data$x))
-    ggsave(gg, file="./treeFigures/cluster_tree.pdf", dpi = dpi, width = width, height = height, units = units)
     # Generate paths reflecting reduction
     remaining_nodes <- c(sum(lengths(regmatches(paths, gregexpr("c", paths)))))
     for (i in 1:length(paths)){
