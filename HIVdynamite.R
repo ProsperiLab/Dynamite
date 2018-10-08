@@ -20,6 +20,8 @@ tryCatch({
             library(phytools)
             write("Loading required package: picante", stderr())
             library(picante)
+            write("Loading required package: ggplot2", stderr())
+            library(ggplot2)
             write("Loading required package: ggtree", stderr())
             library(ggtree)
             write("Loading required package: colorspace", stderr())
@@ -606,7 +608,7 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
         write.csv(tip_table, paste("./treeSlices/renamed_leaves",percentiles[x],".csv",sep=""), row.names = FALSE)
         new_leaves <- c(length(df$leafname))
         for (i in 1:length(df$leafname)){
-            new_leaf_index <- grepl(paste("^",df$leafname[i], "$", sep=""), tip_table$cut_tree.tip.label)
+            new_leaf_index <- grepl(paste("^",df$leafname[i], "$|^", df$leafname[i], "\\$[0-9]+\\.[0-9]+", sep=""), tip_table$cut_tree.tip.label)
             new_leaves[i] <- as.character(tip_table$cut_tree.tip.label)[as.logical(new_leaf_index)][1]
         }
         new_df <- df
