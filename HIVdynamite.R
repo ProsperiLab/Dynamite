@@ -8,7 +8,12 @@ tryInstall <- function(missing_lib){
     while ((install != "y") || (install != "n")){
         install <- readline(prompt=paste("Install ", missing_lib, "? [y/n]\n", sep=""))
         if (install == "y"){
-            install.packages(missing_lib)
+            if (missing_lib %in% c("picante","ggplot2","colorspace","phytools"){
+                install.packages(missing_lib)
+            } else {
+                source("https://bioconductor.org/biocLite.R")
+                biocLite("ggtree")
+            }
         } else if (install == "n"){
             quit(status=0)
         }# end if-else
