@@ -15,7 +15,7 @@ tryInstall <- function(missing_lib){
                 biocLite("ggtree")
             }
         } else if (install == "n"){
-            quit(status=0)
+            stop()
         }# end if-else
     }# end while
 }# end tryInstall
@@ -44,7 +44,7 @@ tryCatch({
             if (grepl("colorspace", err)){
                 tryInstall("colorspace")
             }
-            quit(status=0)
+            stop()
          })# end tryCatch
 
 # Function to read Nexus files or Newick files
@@ -62,9 +62,9 @@ checkAndConvertTree <- function(filename, percentiles){
         write.tree(nexus_tree, file=nexus_name)
         return(nexus_name)
     } else {
-        # Neither Newick nor Nexus identified -- quit
+        # Neither Newick nor Nexus identified -- stop
         write("Cannot identify tree format. Use nexus (nex,nxs,nexus) or newick (nwk,newick) formats.",stderr())
-        quit(status=1)
+        stop()
     }# end if-else
 }# end check_and_convert_tree
 
@@ -326,7 +326,7 @@ reduceClusterPaths <- function(paths, clusters, percentiles, tree){
     for (i in 1:length(paths)){
         if (is.null(paths[i])){
             write("No clusters detected", stderr())
-            quit(status=0)
+            stop()
         }
         # For path in paths, get clusters
         clust_vector <- strsplit(paths[i],';')[[1]]
@@ -522,7 +522,7 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
     tree <- read.newick(filename)
     if (!is.rooted(tree)){
         write("Tree not rooted. Must provide rooted tree.", stderr())
-        quit(status=1)
+        stop()
     }
     # Check tree has node labels
     if (is.null(tree$node.label)){
