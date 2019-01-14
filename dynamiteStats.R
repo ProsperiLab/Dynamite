@@ -28,10 +28,10 @@ birthCountClusteredLeafCount <- function(df) {
     }
   }
   results_list <- list(
-    "births" = births,
-    "clust_leaves" = clust_leaves,
-    "median_seq_per_clust" = median_seq_per_clust,
-    "median_pd" = median_pd
+    "Births" = births,
+    "ClustLeaves" = clust_leaves,
+    "MedianSeqPerClust" = median_seq_per_clust,
+    "MedianPD" = median_pd
   )
   return(results_list)
 }
@@ -143,8 +143,8 @@ getPybusSpeciationClustcount <- function(df) {
 getBirthDeathSingleClust <- function(df) {
   # births, clust_leaves, median_seq_per_clust, median_pd
   bcclc <- birthCountClusteredLeafCount(df)
-  bcclc$deaths <- deathCount(df)
-  bcclc$singletons <- singletonCount(df)
+  bcclc$Deaths <- deathCount(df)
+  bcclc$Singletons <- singletonCount(df)
   return(data.frame(bcclc))
 }
 
