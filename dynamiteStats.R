@@ -164,14 +164,20 @@ fillEmptyTreeLevels <- function(df) {
 }
 
 
-totalLeafCount <- function(slices) {
-  counts = c()
+totalLeafCherryCount <- function(slices) {
+  counts <- c()
+  cherries <- c()
   for (i in slices) {
-    subtree_leaf_count <-
-      ape::read.tree(paste("./treeSlices/treeSlice", i, ".nwk", sep = ""))$tip.label
-    counts <- c(counts, subtree_leaf_count)
+    tree <- ape::read.tree(paste("./treeSlices/treeSlice", i, ".nwk", sep = ""))
+    if (length(tree$tip.label) < 4){
+      cherries <- c(cherries, 0)
+    } else {
+      cherry_data <- capture.output(cherry(tree))
+      cherries <- c(cherries, strsplit(cherry_data[6],' ')[[1]][4])
+    }
+    counts <- c(counts, length(tree$tip.label))
   }
-  return(list("TotalLeaves" = counts))
+  return(list("TotalLeaves" = counts, "Cherries"=cherries))
 }
 
 
@@ -186,19 +192,6 @@ clusterSizeByTreeSize <- function(df) {
   return(df)
 }
 
-# totalBranchLengthFromRoot <- function(){
-#   # For each tree slice, read the sum(branchLengthFromRoot)
-#   # and add to appropriate slice in df
-#   slices <- c("0.1","0.2","0.3","0.4","0.5","0.6","0.7","0.8","0.9","1")
-#   df <- data.frame()
-#   for (level in slices){
-#     df <- rbind(df, read.csv(paste("/treeSlices/treeSliceTotalBranchLength",
-#                                   level, ".csv", sep="")))
-#   }
-#   colnames(df) <- c("TotalBranchLength")
-#   return(df$TotalBranchLength)
-# }
-
 
 rootTipDist <- function() {
   scores <- c()
@@ -212,13 +205,17 @@ rootTipDist <- function() {
   return(scores)
 }
 
+
 dynaStats <- function() {
   df <- read.csv("./treeTables/HIVdynamite.csv")
+  slices <- c("0.1","0.2","0.3","0.4","0.5","0.6","0.7","0.8","0.9","1")
   
-  cluster_level_df <- clusterSizeByTreeSize(df)
-  
+  #cluster_level_df <- clusterSizeByTreeSize(df)
+  leaf_cherry_data <- totalLeafCherryCount(slices)
   df_psc <- getPybusSpeciationClustcount(df)
   df_psc <- fillEmptyTreeLevels(df_psc)
+  df_psc$TotalLeaves <- leaf_cherry_data$TotalLeaves
+  df_psc$Cherries <- leaf_cherry_data$Cherries
   mid <- getBirthDeathSingleClust(df)
   df_psc <- merge(df_psc, mid, by = "row.names", all = TRUE)
   df_psc$Row.names <- NULL
