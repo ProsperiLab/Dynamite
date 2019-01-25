@@ -524,12 +524,20 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
         write("Tree not rooted. Must provide rooted tree.", stderr())
         stop()
     }
-    # Check tree has node labels
-    if (is.null(tree$node.label)){
-        tree$node.label <- rep_len(1, tree$Nnode)
-    }    
     # Resolve Multichotomies
     tree <- multi2di(tree, random = FALSE)
+    # Check tree has node labels
+    if (is.null(tree$node.label)){
+        tree$node.label <- rep(0.999, tree$Nnode)
+        tree$node.label[1] <- ""
+    }    
+    write.tree(tree, "working_tree.nwk")
+    tree <- read.tree("working_tree.nwk")
+    if (is.null(tree$node.label)){
+        write("ERROR: Bootstrap missing.", stderr())
+        stop()
+    }
+    filename <- "working_tree.nwk"
     # Make directory for treeSlices
     dir.create(file.path(".","treeSlices"))
     dir.create(file.path(".","treeFigures"))
