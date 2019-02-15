@@ -534,12 +534,14 @@ calculateNe <- function(tree, nttd, is_cluster){
     return(ne)
 }
 
-addNeColumns <- function(){
+addNeR0Columns <- function(){
     # Read the HIVdynamite results
     results <- read.csv("./treeTables/HIVdynamite.csv")
     tree_ne_boolean <- as.character(rep(0,10))
     tree_ne <- c()
     cluster_ne <- c()
+    tree_r0 <- c()
+    cluster_r0 <- c()
     # For each row of the results, get cluster Ne and tree Ne
     for (x in 1:nrow(results)){
         cluster <- results[x,1:ncol(results)]
@@ -549,23 +551,39 @@ addNeColumns <- function(){
             tree <- read.tree(tree_file)
             nttd <- max(phytools::nodeHeights(tree))
             tree_ne_boolean[as.numeric(tree_level)] <- "1"
-            tree_ne <- c(tree_ne, calculateNe(tree, nttd, FALSE))
+            ne <- calculateNe(tree, nttd, FALSE)
+            tree_ne <- c(tree_ne, ne)
+            tree_r0 <- c(tree_r0, calculateR0(tree, nttd, ne))
         } else {
             tree_ne <- c(tree_ne, tree_ne[x-1])
+            tree_r0 <- c(tree_r0, tree_r0[x-1])
         }
         cluster_tree <- keep.tip(tree, strsplit(as.character(cluster$Leaves), ';')[[1]])
         mrca_node <- findMRCA(tree, as.character(cluster_tree$tip.label), type="node")
         nttd <- max(dist.nodes(tree)[mrca_node, match(as.character(cluster_tree$tip.label), tree$tip.label)])
-        cluster_ne <- c(cluster_ne, calculateNe(cluster_tree, nttd, TRUE))
+        cne <- calculateNe(cluster_tree, nttd, TRUE)
+        cluster_ne <- c(cluster_ne, cne)
+        cluster_r0 <- c(cluster_r0, calculateR0(cluster_tree, nttd, cne))
     }
     columns <- data.frame(tree_ne)
     columns$ClusterNe <- cluster_ne
-    colnames(columns) <- c("TreeNe", "ClusterNe")
+    columns$TreeR0 <- tree_r0
+    columns$ClusterR0 <- cluster_r0
+    colnames(columns) <- c("TreeNe", "ClusterNe","TreeR0","ClusterR0")
     # Merge the Ne data frame with the HIVdynamite results and write the output
     df <- merge(results, columns, by=0, all=TRUE, sort=FALSE)
     df$Row.names <- NULL
     write.csv(df, "./treeTables/HIVdynamite.csv", row.names = FALSE)
     return(df)
+}
+
+calculateR0 <- function(tree, nttd, Ne){
+    if (Ne == 0){
+        return(0)
+    } else {
+        tips <- length(tree$tip.label)
+        return(-log(Ne/(Ne*(tips-1)))/nttd)
+    }
 }
 
 processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=15, perc_dist=0.05){
@@ -747,7 +765,7 @@ processTree <- function(input_tree, slice_count=10, bootstrap=0.70, min_leaves=1
     write.csv(final_clusters, file="./treeTables/HIVdynamite.csv", row.names=FALSE)
     file.remove("./treeTables/processedTree.csv")
     file.remove("./treeTables/long_format.csv")
-    final_clusters <- addNeColumns()
+    final_clusters <- addNeR0Columns()
     return(final_clusters)
 }# end function processTree
 
