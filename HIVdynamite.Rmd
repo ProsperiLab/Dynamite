@@ -1,0 +1,995 @@
+---
+title: "R Notebook"
+output: html_notebook
+note: under development
+---
+```{tmp working files and dir}
+## Working files to test dynamite
+setwd("/Users/macbook/Dropbox (UFL)/DYNAMITE/HIVdynamite/training_data")
+filename <- "B.JP_NCC_LANL.nwk"
+```
+
+Install and load necessary packages
+```{install required libraries}
+## Initialize stable working environment and store time of intiation
+rm(list=ls())
+setwd(getSrcDirectory()[1]) #When working on the cluster
+#dirname(rstudioapi::getActiveDocumentContext()$path) # If working in Rstudio
+rt0 <- Sys.time()
+
+# List of packages for session
+.packages <-  c("phytools","data.tree", "tidytree", "rlist", "familyR", "tidyverse", "ggplot2", "gridExtra", "ggtree", "drc", "quantmod", "remotes", "growthrates", "drc", "phangorn", "parallel", "lubridate") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
+github_packages <- c("mrc-ide/skygrowth", "tothuhien/Rlsd2") # mrc-ide/skygrowth, "mdkarcher/phylodyn" may need to be done if we think our Re values are going to be greater than 5 for any cluster! If the latter, need aslo install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
+
+## Will need to remove install section if using on cluster ###################################
+# Install CRAN packages (if not already installed)
+.inst <- .packages %in% installed.packages()
+if(length(.packages[!.inst]) > 0) install.packages(.packages[!.inst])
+.inst_github <- .packages %in% installed.packages()
+## Install GitHub packages(if not already installed)
+if(length(github_packages[!.inst_github]) > 0) try(remotes::install_github(github_packages[!.inst_github]))
+if(length(github_packages[!.inst_github]) > 0) try(devtools::install_github(github_packages[!.inst_github]))
+## Will need to remove install section if using on cluster ###################################
+
+# Load packages into session 
+lapply(.packages, require, character.only=TRUE)
+lapply(gsub(".+\\/(.+)", "\\1", github_packages), require, character.only=TRUE)
+
+# Additional options
+`%notin%` <- Negate(`%in%`) # Just plain useful
+# The option below is useful when dealing with dates of internal nodes downstream
+options(digits=15)
+
+```
+
+Script will read in tree from directory based on a number of format
+```{read in tree}
+# Function to read Nexus files or Newick files 
+checkForTree <- function(filename) {
+  write("Make sure tree is scaled in substitutions/site and not in units of time.", stderr())
+  # Check tree format -- either Newick or Nexus -- using suffices
+  if (endsWith(filename, "nwk") || endsWith(filename,"newick") || endsWith(filename,"treefile")){
+    write(paste("Newick file detected:", filename, sep=" "), stderr())
+    sub_tree <- read.tree(filename)
+  } else if (endsWith(filename, "nex") || endsWith(filename,"nexus") || endsWith(filename, "nxs")){
+    write("Nexus file detected",stderr())
+    sub_tree <- read.tree(filename) ##Note: will not read in bracketed annotations!
+    return(filename)
+  }  else {
+    # Neither Newick nor Nexus identified -- stop
+    write("Cannot identify tree format. Use nexus (nex,nxs,nexus), newick (nwk,newick), our BEAST output (tre, trees) formats.",stderr())
+  }# end conditional statement
+    #assign("sub_tree", sub_tree, envir=globalenv())
+  return(sub_tree)
+}# end checkforTree function
+sub_tree <- checkForTree(filename)
+
+## Need to force binary tree
+if (isFALSE(is.binary(sub_tree)) {
+  sub_tree <- multi2di(sub_tree)
+  sub_tree$node.label[sub_tree$node.label==""] <- "100"
+} else {
+  sub_tree <- sub_tree
+}
+
+
+#Need to replace zero branch lengths with full bootstrap support
+```
+
+```{Optional create tree from DNA sequences}
+seqs <- read.dna("sim_seqs.fasta", format="fasta")
+seqs <- phyDat(seqs, type="DNA")
+# <!-- models <- modelTest(seqs, tree = NULL, model = c("JC", "F81", "K80", "HKY", -->
+# <!--   "SYM", "GTR"), G = TRUE, I = TRUE, FREQ = FALSE, k = 4, -->
+# <!--   control = pml.control(epsilon = 1e-08, maxit = 10, trace = 1), -->
+# <!--   multicore = FALSE, mc.cores = NULL) -->
+  
+dist.mat <- dist.ml(seqs, model="F81", k=4, shape=0.1)
+ml.tree <- fastme.ols(dist.mat, nni=TRUE)
+
+fit <- pml(ml.tree, seqs)
+fit <- optim.pml(fit)
+set.seed(123)
+
+## Bootstrapping is taking too long. Just see if Hien can carry over branch support values from original tree.
+bs <- bootstrap.pml(fit, bs=100, optNni=TRUE, multicore=T, mc.cores=2)
+treeBS <- plotBS(fit$tree,bs)
+
+
+
+
+```
+
+Script will first use least squares dating approach developed by To et al. (2016) in the package Rlsd2 (https://github.com/tothuhien/lsd2) to 1) find the optimal root position in the tree and 2) remove outliers with longer-than-expected (penalized) branch lengths, and 3) output both a timed tree and rooted substitutions/site tree to the global environment (updates sub_tree).
+
+Need to change this so that user prompted to specify date format!
+```{create time.tree}
+# Function to convert sub_tree to time_tree
+checkForDates <- function(sub_tree) {
+  write("If using taxa names for date information, please make sure dates are in numeric/decimal format. If not, please use lubridate package (date_decimal() function to convert dates to numeric form or upload dates table.")
+  dates_file <- try(read.table(file="sts.txt", skip=1, colClasses = "character"))
+  if ("try-error" %in% class(dates_file)) {
+      date.preceding <- readline(prompt="What character always precedes the date in taxa names?")
+      date.preceding <- paste0("\\",date.preceding)
+      sts <- setNames(as.numeric(gsub(paste0("^.*", date.preceding, "([0-9]{4}[\\.0-9]*)", ".*$"), "\\1", sub_tree$tip.label)), sub_tree$tip.label)
+        # if (class(sts) == "integer") {
+        #   sts <- as.Date(ISOdate(sts, 1, 1))
+        # } else if (class(sts) == "numeric") {
+        # sts <- as.Date(as.character(sts))
+        # } # End integer vs numeric if statement
+  } else {
+    sts <- setNames(dates_file[,2], dates_file[,1])
+    # if (class(sts) == "integer") {
+    #       sts <- as.Date(ISOdate(sts, 1, 1))
+    #     } else if (class(sts) == "numeric") {
+    #     sts <- as.Date(as.character(sts))
+    #     } # End integer vs numeric if statement
+} # End attempt to read sts from taxa or dates_file
+  
+  ## Checkpoint
+  if (isTRUE(max(as.Date(ISOdate(sts, 1, 1)))> Sys.Date())) {
+    write(paste("The following sequences likely have incorret dates:",
+                  return(sts[sts==max(sts)]),
+    "Please start DYNAMITE again, placing a .csv or .txt dates file (with 'taxon' and 'date' headers) with correct information in current folder, and DYNAMITE will read it.", 
+                  sep=" "))
+    stop()
+  } # End checkpoint if statement
+  ## Will need sts in downstream analyses
+  return(sts)
+} # End checkForDates function  
+sts <- checkForDates(sub_tree)
+tree_plot <- ggtree(time_tree_data, mrsd=date_decimal(mrsd)) +theme_tree2()
+DateTree <- function(sub_tree) {
+#  time_tree <- dater(sub_tree, sts, ncpu=4, parallel_foreach=TRUE) 
+  seqLen <- readline(prompt="What is the approximate length of your sequences?:")
+  result <- lsd2(inputTree=sub_tree, 
+                 inputDate=sts, 
+                 estimateRoot="as", 
+                 constraint=TRUE, 
+                 variance=1, 
+                 ZscoreOutlier = 3,
+                 outFile = "lsd2_results",
+                 seqLen = seqLen,
+                 nullblen=-1)
+  assign("sub_tree", result$newickTree, envir=globalenv())
+  assign("time_tree", result$dateNexusTreeFile@phylo, envir=globalenv())
+  assign("time_tree_data", result$dateNexusTreeFile, envir=globalenv())
+  assign("tmrca", result$tMRCA, envir=globalenv())
+}# End DateTree function
+DateTree(sub_tree)
+
+
+
+# Function to specify most recent sampling date (mrsd)
+findMRSD <- function(time_tree) {
+    mrsd <- max(sts[names(sts) %in% time_tree$tip.label])
+    date.mrsd <- as.Date(date_decimal(mrsd))
+    assign("num.mrsd", mrsd, envir=globalenv())
+    assign("date.mrsd", date.mrsd, envir=globalenv())
+  write("The updated most recent sampling date is:", return(date.mrsd), sep=" ")
+} # End findMRSD function
+findMRSD(time_tree)
+
+```
+
+We will now use a coalescent model, which considers the genealogical process of our sample of taxa taken from an assumed large population that changes in time deterministically. The population size is assumed to be homogeneous and under neutral evolution; although in practice these assumptions are violated, the ‘effective population size’, Ne, can often still be derived, which gives the same coalescence rate as an idealized population of size N. During exponential growth, there is a linear relationship between the prevalence and the incidence, and hence the coalescence rate is directly proportional to the number of infected individuals (Frost and Volz, 2010). Assuming our sampled sequences exhibit the behavior described above, we will use a non-parametric coalescent model to estimate Ne and a polynomial model fit to the Ne to determine the time window during which the exponential growth phase exists. Since genealogies representative of exponentially increasing populations often provide very little information about effective population size near the present (or most recent sample) (de Silva et al. 2012), original "skyline" (Pybus et al., 2000; Strimmer and Pybus, 2001) estimators with Brownian motion priors (Minin et al. 2008; Palacios and Minin 2013) on Ne may produce estimates which stabilize at a constant level even when the true size is increasing or decreasing exponentially. Volz and Didelot's "skygrowth" model offers a more realistic prior that is defined in terms of the growth rate of Ne. Following Ne estimation using skygrowth and definition of the exponential growth period, the maximum branch length (scaled in substitutions/site) during this period of time will be used as the cutoff to determine the incorporation of internal and external nodes into a "transmission cluster" throughout the remainder of the tree. The reasoning behind this is that, during this time, the internal nodes can be considered individuals involved in direct transmission of the start of the epidemic and enable us to define the maximum branch length as the estimated maximum geentic distance separating direct transmission events. 
+
+```{Calculate Ne and Re} 
+
+### Using skygrowth package to estimate Ne and R0 (from Ne)
+calculateNe <- function(sts, tree) {
+  write("Ne will be allowed to change every week approximately. If you would like higher resolution, the 'res' parameter within the calculate_Ne() function will need to be changed. For example, for weekly estimates, multiply res*4")
+  present_date <- max(sts)
+  start_date <- min(sts)
+  fit <- skygrowth.map(tree 
+  , res = round((present_date-start_date)*12*4)  # Ne changes every week approximately
+  , tau0 = .1)    # Smoothing parameter. If prior is not specified, this will also set the scale of the prior
+   p <- plot(fit) 
+ output <- data.frame(time = start_date+(p$data$t/365), nemed = p$data$nemed)
+#  r <- R.plot(fit, gamma = 1/psi, ggplot = TRUE)
+  return(output)
+}
+calculateRe <- function(Ne, conf.level=0.95) {
+  s <- 100 # sample size of 100
+  psi <- rnorm(s,0.00015, 0.00005) #Duration of infection range 3-8 days 
+  Z=qnorm(0.5*(1 + conf.level))
+  Re <- list()
+  for (i in 2:nrow(Ne)) {
+    time = Ne$time[i-1]
+    Re.dist = sample(1+psi*(Ne$nemed[i]-Ne$nemed[i-1])/((Ne$time[i]-Ne$time[i-1])*Ne$nemed[i-1]),
+                     size=10, replace=F)
+    logRe = log(Re.dist)
+    SElogRe = sd(logRe)/sqrt(10) # standard deviation of 2, sample size of 10
+    LCL = exp(mean(logRe) - Z*SElogRe) 
+    UCL = exp(mean(logRe) + Z*SElogRe) 
+    Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")")) 
+  }
+  Re <- do.call("rbind",Re)
+  #return(Re)
+}
+Re_full_tree <- calculateRe(Ne_full_tree)
+```
+
+
+Using a pre-order (root-to-tip) tree traversal, for each node, find subtrees/clades (>=3 nodes) for which cumulative mean branch, or edge, length is within the branch length limit at that level within the tree using the DYNAMITE algorithm. Note this should only be used with epidemics that are past the exponential phase of growth.
+```{find clusters using DYNAMITE}
+
+defineClades <- function(sub_tree) {
+  ## Grab tree scaled in substitutions/site from time_tree ("intree") so that we know that node numbers line up later on when obtaining temporal information
+  sub_tree <- sub_tree
+  ## Grab only subtrees that are supported by bootstrap values >90
+  ## We may need to change this in case people have other support values
+  ## Note that subtrees() function in ape renumbers nodes, so useless here, since at the end we wish to recombine the information
+  family_tree <- tidytree::as_tibble(sub_tree)
+  ## Need to relabel columns so that "parent" and "node" are "from" and "to" for familyR::get_children function
+  colnames(family_tree)[1:2] <- c("from", "to")
+  ## The dataframe needs to be transformed back into a data.table for future analyses
+  family_tree <- data.table::as.data.table(family_tree)
+ 
+  supported_nodes <- family_tree# All of family_tree for simulations
+ 
+  ## Creating a list for all sub_trees using the familyR package (get_children function)
+  clades <- list()
+  for (node in unique(supported_nodes$to)) {
+    clades[[node]] <- familyR::get_children(family_tree, node)
+  } # End loop along family_tree_supported
+  ## This function introduces several null items in the list, which can be removed by the following:
+  clades<-plyr::compact(clades)
+  ## Merge information across 'nodes' and 'edges' dataframes within each nested list
+  for (i in seq_along(clades)) {
+    clades[[i]] <- merge(clades[[i]]$edges,clades[[i]]$nodes, by.x = "to", by.y = "id")
+  } # End loop along clades
+  ## Restructure list of clades for easy visualization and manipulation and remove
+  ## Zeroth level (contains root branch length) from first clade (full tree) if exists
+  clades <- lapply(clades, function(x) {
+    dplyr::select(x, from, everything()) %>%
+      arrange(level) %>%
+      filter(!level==0)
+  }) %>%
+    list.filter(from[1] != rootnode(sub_tree)) # Whole tree is included because support is alwasy 100% for root, so discard# End loop along clades
+  
+  # Save to global environment or merge next function.
+  assign("clades", clades, envir=globalenv())
+  
+  
+} # End defineClades function
+defineClades(sub_tree)
+
+dynamite.algo <- readline(prompt="Do you wish to use the DYNAMITE algorithm? Y/N (Please note this should only be used for outbreaks past the epidemic growth phase")
+
+if(dynamite.algo == "Y") {
+  findExpGrowthLimit <- function(time_tree) {
+  ## Calculate Ne
+  Ne_full_tree <- calculateNe(sts, time_tree)
+  ## Plot Ne
+  ggplot(data=Ne_full_tree, aes(x=time, y=nemed))  + stat_smooth(method="loess", formula=y~x)
+  ## Assign Ne for full tree to global environment for later calclation of Re for whole tree
+  assign("Ne_full_tree", Ne_full_tree, envir = globalenv())
+
+  ## Fit logistic growth curve to smooth data and find time at which exponential growth rate ends
+mL <- try(drm(data=Ne_full_tree, nemed~time, fct = L.4(), type = "continuous"), silent=T)
+if("try-error" %in% class(mL)) { # logistic fit will fail if still in exponential growth phase
+  time_epi_peak <- max(sts) #If this happens then the time of the peak is the mrsd
+  branch_length_limit <- max(sub_tree$edge.length) # and branch length limit equals max branch length in tree
+} else {
+  p <- plot(mL)
+  Ne_exp <- fit_easylinear(p$time, p$`1`)
+  time_epi_peak <- max(Ne_exp@fit$model)
+    ## Grab only portion of the tree prior to peak of growth    
+  time.tree.exp <- time_tree_data[time_tree_data@data$date <= time_of_epi_peak]
+  ## Merge with original branch lengths from tree scaled in substitutions/site
+  time.tree.exp <- left_join(time.tree.exp, as_tibble(sub_tree), by=c("node"))
+  ## Determine branch length limit by finding the maximum branch length in portion of tree   experiencing exponential growth
+  branch_length_limit <- max(time.tree.exp$branch.length[!is.na(time.tree.exp$branch.length)])
+}
+
+
+g <- ggplot(data=Ne_full_tree, aes(x=time, y=nemed))  + geom_point()
+  stat_smooth(method="loess", formula=y~x)
+  require(quantmod)
+peak <- findPeaks(g$data$nemed)[1]
+time_epi_peak <- g$data$time[peak]
+#Ne_exp <- fit_easylinear(g$data$time, g$data$nemed*100, h=4)
+#time_epi_peak <- max(Ne_exp@fit$model)
+    ## Grab only portion of the tree prior to peak of growth    
+  time.tree.exp <- time_tree_data[time_tree_data@data$date <= time_epi_peak]
+  ## Merge with original branch lengths from tree scaled in substitutions/site
+  time.tree.exp <- left_join(time.tree.exp, as_tibble(sub_tree), by=c("node"))
+  ## Determine branch length limit by finding the maximum branch length in portion of tree   experiencing exponential growth
+  branch_length_limit <- max(time.tree.exp$branch.length[!is.na(time.tree.exp$branch.length)])
+
+  assign("branch_length_limit", branch_length_limit, envir=globalenv())
+  write(paste("The time of the epi peak is",
+                  return(time_epi_peak), sep=" "))
+
+} # End findExpGrowthLimit function
+  findExpGrowthLimit(time_tree)
+  #Currently moves successively through levels from root, adding nodes to the root of the subtree for which the mean of its branch length, in combination with all branches from prior leaves, is less than the limit. The limit is chosen as described above.
+  pickClust <- function(clade){
+ 
+  ## Need to add mean_bl column  to original clade list
+  clade$mean_bl <- rep(Inf, nrow(clade))
+  
+  ## Set initial values
+  current_level <- as.numeric(2)
+  current_mean_bl <- as.numeric(-Inf)
+    
+  ## Initiate subclade using first two edges connected to root of clade (level=1)
+  sub_clade <- filter(clade, level==1,
+                        branch.length <= branch_length_limit)
+  
+    
+  while(isTRUE(current_mean_bl <= branch_length_limit)){
+  
+    # Create a vector of nodes sampled from the subsequent level 
+    # Each iteration chooses amongst nodes that are connected to the current sub-clade:
+   
+        next_level_nodes <- filter(clade, level == current_level,
+                               from %in% sub_clade$to)
+    
+    # A shortlist of possible enlargements of the sub-clade is kept to be able
+    # to compare each potential enlargement of the sub-clade and always keep the enlargement
+    # if the mean branch length is under the limit  
+    #
+    # The shortlist is enlarged by vertices that are:
+    #  1) adjacent to the most recent added node(s)
+    #  2) not already IN the sub_clade
+    new_node <- setdiff(next_level_nodes, sub_clade)
+    sub_clade <- rbind(sub_clade,new_node)
+ 
+    
+    # The branch length is NOT calculated by the branch length of an individual
+    # edges leading to nodes in the shortlist BUT on the mean of the nodes in the previous level
+    # and added node.
+    for (x in 1:nrow(sub_clade)) {
+      if (isTRUE(sub_clade$level[x] < current_level &
+          sub_clade$mean_bl[x] != Inf)) {
+        sub_clade$mean_bl[x] <- sub_clade$mean_bl[x]
+      } else{
+        sub_clade$mean_bl[x] <- sum(c(sub_clade$branch.length[x],
+                                subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))/
+        length(c(sub_clade$branch.length[x],
+                 subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))
+      }
+    }
+    
+    # Identify nodes with mean branch length > current mean branch length limit
+    # and remove from shortlist
+    unwanted_edges_at_current_level <- filter(sub_clade, level==current_level, mean_bl >= branch_length_limit)
+    sub_clade <- setdiff(sub_clade, unwanted_edges_at_current_level)
+    
+    ## Redefine current level and mean branch length, taking into account whether 
+    ## or not all nodes belonging to the current level have been filtered out
+      if (max(sub_clade$level)==current_level) {
+        current_mean_bl <- min(sub_clade$mean_bl[level=current_level])
+        current_level <- current_level+1
+      } else {
+        current_mean_bl = Inf
+        current_level <- current_level+1
+      } # End ifelse statment
+  } # End tree traversal (while loop)
+    if (nrow(sub_clade) == 0) {
+      return(NULL)
+    }else {
+      return(sub_clade)
+    }
+} # End pickClust function
+  clusters<-list()
+for (i in seq_along(clades)) {
+  try(clusters[[i]] <- pickClust(clades[[i]]))}
+clusters <- compact(clusters)
+} else {if(dynamite.algo == "N") {
+  write("Proceeding with Phylopart cluster-picking algorithm", stderr())
+}
+```
+
+
+Using a depth-first algorithm developed by Prosperi et al., (2011), find subtrees/clades (>=2 nodes) for which median pairwise patristic distances (MPPD) is within 1-5% of the distribution of MPPDs of clades within the entire tree.
+```{find clusters using Phylopart}
+## Function to retrieve patristic distances from phytools
+fastDist<-function(tree,sp1,sp2){
+  fastHeight(tree,sp1,sp1)+fastHeight(tree,sp2,sp2)-
+    2*fastHeight(tree,sp1,sp2)}
+
+### Create matrix of each pairwise patristic distance
+leaves <- expand.grid(sub_tree$tip.label,sub_tree$tip.label)
+p.dist.leaves <- sapply(seq_len(nrow(leaves)), ## Create list of all pairwise combinations of IDs using expand.grid()
+                            function(k) { #future_sapply actually slower here!
+  i <- leaves[k,1]
+  j <- leaves[k,2]
+  fastDist(sub_tree, i,j)
+})
+p.dist.mat.leaves <- matrix(p.dist.leaves,
+                            nrow=Ntip(sub_tree), ncol=Ntip(sub_tree),
+                            dimnames=list(sub_tree$tip.label,sub_tree$tip.label))
+
+## Given a node, tree, and distance matrix, return
+## median pairwise patristic distance (MPPD) of its leaves
+get.node.leaf.MPPD <- function(node,tree,distmat){
+  nlist <- tips(tree,node)
+  foo <- distmat[nlist,nlist]
+  return(median(foo[upper.tri(foo,diag=FALSE)]))
+}
+
+## Can't do the following because only have distance matrix for leaves (old cophenetic.phylo() f(x) is too slow.)
+## Given a node, tree, and distance matrix, return
+##  median pairwise patristic distance (MPPD) of all of its decendants
+# get.node.full.MPPD <- function(node,tree,distmat){
+#   nlist <- tips(tree,node)
+#   elist <- tree$edge[which.edge(tree,nlist),2]
+#   foo <- distmat[elist,elist]
+#   return(median(foo[upper.tri(foo,diag=FALSE)]))
+# }
+
+## Given a tree and (optionally) a distance matrix,
+## return a vector giving the median pairwise
+##  patristic distance of the subtree under each internal node
+pdist.clusttree <- function(tree,distmat){
+  ntips<- Ntip(tree)
+  nint <- tree$Nnode ## number of internal nodes
+  node_num <- (ntips+2):(ntips+nint)
+  MPPD <- sapply((ntips+2):(ntips+nint),get.node.leaf.MPPD,tree,distmat) #Maybe consider using future_sapply here to speed things up?
+  return(data.frame(node_num=node_num, MPPD=MPPD))
+}
+
+distvec <- pdist.clusttree(sub_tree, p.dist.mat.leaves)
+hist(distvec$MPPD)
+
+phylopart.threshold <- prompt("Choose percentile threshold between 0.01 and 0.05:")
+
+branch_length_limit <- quantile(distvec$MPPD, phylopart.threshold)
+
+pdist.clades <- function(clades, tree, distmat){
+  mclapply(clades, function(x) {
+    get.node.leaf.MPPD(x$from[1], tree, distmat)
+  }, mc.cores=num.cores)
+}
+
+clade_MPPD <- pdist.clades(clades, sub_tree, p.dist.mat.leaves)
+
+clusters <- list()
+for (clade in seq_along(clades)) {
+  if (clade_MPPD[[clade]] <= branch_length_limit) {
+    clusters[[clade]] <- clades[[clade]]
+  } else{NULL}
+}
+
+```
+
+Clusters list is filled with NULL objects and overlapping clades, which need to be merged.
+```{cluster refinement}
+##For nested clades (>=3 nodes) identified as clusters, since passed the test of genetic distances, need to remove references to FULLY NESTED inner clades while keeping the larger clade (and potential overlapping clades). I did not do this prior to picking clusters because some clusters within  a clade may be separated by one to two branches that did not meet the branch length criteria above.  
+
+mergeOverlappingClusters <- function(clusters) {
+  copy <- clusters
+  result <- list()
+  unwanted <- list()
+  for (ct in seq_along(clusters)) {
+    for (cc in seq_along(copy)) {
+      if (isTRUE(all(clusters[[ct]]$label %in% copy[[cc]]$label) &
+                 length(clusters[[ct]]$label) != length(copy[[cc]]$label))) {
+        unwanted[[ct]] <- clusters[[ct]]
+      } else{NULL}
+    } # End loop along copy
+  } # End loop along true
+  result <- setdiff(clusters, unwanted)
+  return(result)
+}  
+clusters <- compact(clusters) %>%
+  mergeOverlappingClusters(clusters) %>%
+  list.filter(clusters, length(label) > 4) ## CDC guidelines
+```
+
+
+Load metadata and employ ancestral state reconstruction of traits. This code is not working. Can't get second part of checkforMetaData code to function after first. 
+```{ASR}
+checkForMetaData <- function(filename, traits) {
+  # Check trait data table format -- either txt or csv -- using suffices
+  if (endsWith(filename, "txt")) {
+    write("Tab-delimited txt file detected:", stderr())
+    write(paste(filename))
+    traits <- read.table(filename, sep='\t', header=T, stringsAsFactors = F)
+  } else if (endsWith(filename, "csv")) {
+    write("CSV file detected",stderr())
+    traits <- read.csv(filename, header=T, stringsAsFactors = F) 
+  }  else {
+    # Neither txt nor csv identified -- stop
+    write("Cannot detect metadata file with trait information.",stderr())
+  }# end if-else
+  assign("traits",traits, envir = globalenv()) 
+  traits <- traits
+  ## Assign taxa names as row names instead of first column
+  traits <- data.frame(traits[,-1], row.names=traits[,1])
+  if(all(sub_tree$tip.label %in% row.names(traits))) {
+    write("Traits successfully applied", stderr())
+    } else {write("Incorrect taxa name supplied - do not match those in tree.",stderr())}
+}# end trait file upload
+
+
+
+
+ancStateRecon <- function() {
+## The element lik.anc gives us the marginal ancestral states, also known as the 'empirical Bayesian posterior probabilities.'
+feed.mode <- list()
+fitER <- list()
+# Need to reduce traits file if tree is pruned of touliers during treedata, since trait names will not match up.
+traits <- traits[rownames(traits) %in% sub_tree$tip.label,]
+for (i in 1:ncol(traits)) {
+  feed.mode[[i]] <- setNames(traits[,i],rownames(traits))
+   fitER[[i]] <- ace(feed.mode[[i]], sub_tree, model = "ER", type="discrete")
+}
+names(fitER) <- colnames(traits)
+## Look here for http://www.phytools.org/Cordoba2017/ex/8/Anc-states-discrete.html for distribution of sampled stochastic character maps when have more computing power
+
+## simulate single stochastic character map using empirical Bayes method
+#mtrees<-make.simmap(sub_tree,feed.mode,model="ER",nsim=100)
+
+### Create rate matrix (Q) ################################################
+### This will need to be modified to incorporate several columns of traits
+### See https://cran.r-project.org/web/packages/filling/filling.pdf for incomplete data ### filling!
+# Q <-list()
+# for (column in 2:ncol(traits)) {
+#   suppressWarnings({ ## We know it fills diagonals with NAs
+#   Q[[column]] <- diag(unique(traits[,column]), nrow = length(unique(traits[,column])))
+#   })
+#   diag(Q[[column]]) = 1-nrow(Q[[column]])
+#   Q[[column]][lower.tri(Q[[column]])] <- 1
+#   Q[[column]][upper.tri(Q[[column]])] <- 1
+#   colnames(Q[[column]]) <- rownames(Q[[column]]) <- unique(traits[,column])
+# }
+# Q <- plyr::compact(Q)
+# names(Q) <- colnames(traits[-1])
+
+
+## Now need to figure out if node numbers match in lik.anc with those of sub_tree
+# library(RColorBrewer)
+# #display.brewer.all(colorblindFriendly = TRUE)
+# cols<-brewer.pal(length(unique(traits[,1])), "Set2")
+# 
+# plotTree(sub_tree,lwd=1)
+# nodelabels(node=1:sub_tree$Nnode+Ntip(sub_tree),
+#            pie=fitER[[1]]$lik.anc,piecol=cols,cex=0.4)
+# add.simmap.legend(colors=cols,prompt=FALSE,x=0.9*par()$usr[1],
+#     y=0.8*par()$usr[3],fsize=0.8)
+
+### Still not sure yet, so need to make sure in the end...
+anc.states <- fitER
+for (i in 1:length(fitER)) {
+  anc.states[[i]] <- as.data.frame(fitER[[i]]$lik.anc)
+  anc.states[[i]]$node <- as.character(1:sub_tree$Nnode+Ntip(sub_tree))
+}
+ names(anc.states) <- names(fitER)
+ 
+
+## Combine node state labels and probabilities with tip state labels (and prob of 1) - may need to go back and use smart bind so that have separate columns for tip.label?
+
+## Should consider transforming data in to states, rather than probabilities, and assign state of "unknown" to nodes with <90% probability of any particular state
+
+tip_labels <- list()
+for (i in 1:ncol(traits)) {
+  tip_labels[[i]] <- as.data.frame(cbind(rownames(traits), traits[,i]), stringsAsFactors = F)
+  colnames(tip_labels[[i]])[1] <- "node"
+  tip_labels[[i]] <- mutate(tip_labels[[i]], value=1, V2) %>%
+    spread(V2, value, fill=0)
+  ## Reorder tip labels according to order in sub_tree and assign numeric labels given in sub_tree in order to integrate all data into a tibble.
+  tip_labels[[i]] <- tip_labels[[i]][order(match(tip_labels[[i]]$node, sub_tree$tip.label)),]
+  tip_labels[[i]]$node <- as.character(as.numeric(1:length(sub_tree$tip.label)))
+}
+names(tip_labels) <- colnames(traits)
+
+for (i in seq_along(anc.states)) {
+  anc.states[[i]] <- rbind(tip_labels[[i]], anc.states[[i]])
+}
+
+## For now, best to only assign one state (per trait) per node, rather than probabilities, and, in order to incorporate uncertainty, we will assign "NEI" (Not Enough Info) to any node with <90% posterior probability of any given state.
+max <- list()
+for (i in seq_along(anc.states)) {
+  max[[i]] <- apply(anc.states[[i]][,2:ncol(anc.states[[i]])], 1, max)
+  anc.states[[i]][,2:ncol(anc.states[[i]])] <- ifelse(anc.states[[i]][,2:ncol(anc.states[[i]])] == max[[i]] & anc.states[[i]][,2:ncol(anc.states[[i]])]>=0.90, 1, 
+                      ifelse(anc.states[[i]][,2:ncol(anc.states[[i]])] == max[[i]] & anc.states[[i]][,2:ncol(anc.states[[i]])]<0.90, "NEI", 
+                             0))
+} 
+##Currently sets the value as "trait", but we can use paste in the future if we want the trait to bear its specific name (e.g., location, age, sex)
+  for (i in names(anc.states)) {
+   anc.states[[i]] <- anc.states[[i]] %>% gather(!!paste(i), value, -node) %>%
+#     anc.states[[i]] <- anc.states[[i]] %>% gather(trait, value, -node) %>%
+   filter(value==1 | value=="NEI") %>% 
+    select(node, !!paste(i))
+#    select(node, trait)
+    ## Need to change node back to integer to integrate with data downstream
+    anc.states[[i]]$node <- as.integer(anc.states[[i]]$node)
+    anc.states[[i]] <- anc.states[[i]][order(anc.states[[i]]$node),]
+} # End loop among elements in list
+  
+## Try 'node' changing this back to 'to' for merging with cluster data
+for (i in seq_along(anc.states)) {
+    names(anc.states[[i]])[names(anc.states[[i]]) == 'node'] <- 'to'
+} # End loop among ancestral states
+
+assign("anc.states", anc.states, envir=globalenv())
+} # End asrClusters function on traits
+
+## CheckForMetaData not working as a function but works individually
+checkForMetaData(filename="asr_traits.txt")
+ancStateRecon() #traits
+
+```
+  
+
+Now we characterize the clusters by data manipulation
+```{cluster characteristics} 
+
+## What if we merged anc. states with clusters table?
+  ## need to replace current branch.length info with branch length information from time_tree instead of current branch lengths ... and time info?
+  ## if we do this, will we need mrsds for each cluster?
+## Below is not working as a function but works individually
+dataManip <- function(clusters) {
+
+## Need to convert clusters to list if only a single cluster found (will be in dataframe format, rather than list)
+if (class(clusters) == "data.frame") {
+  clusters <- list(clusters) 
+  } else if (class(clusters) == "list") {
+    clusters <- clusters
+  } else {warning("class of clusters data unknown, error in dataManip() function or above")}
+anc.states <- list.cbind(anc.states)
+names(anc.states) <- gsub("^.*\\.","", names(anc.states))
+anc.states <- subset(anc.states, select=which(!duplicated(names(anc.states)))) 
+
+
+cluster_data <- list()
+for (i in seq_along(clusters)) {
+    cluster_data[[i]] <- merge(x=clusters[[i]], y=anc.states, by = "to")
+    cluster_data[[i]] <- dplyr::rename(cluster_data[[i]], parent = "from")
+    cluster_data[[i]] <- dplyr::rename(cluster_data[[i]], node = "to")
+    cluster_data[[i]] <- dplyr::select(cluster_data[[i]], parent, everything())
+}
+
+names(cluster_data) <- names(clusters) # Names are in the reduceClust function
+
+
+## Add cluster ID as a kind of node label, remove branch lengths, and revert labels back to original (bootstrap data and tip labels)
+for (i in names(cluster_data)) {
+  cluster_data[[i]]$cluster_id <- paste(i)
+  ## Merge with original labels (including tip labels)
+  cluster_data[[i]] <- select(cluster_data[[i]], -label)
+  cluster_data[[i]] <- merge(cluster_data[[i]],  as_tibble(sub_tree))
+  cluster_data[[i]] <- select(cluster_data[[i]], cluster_id, everything(), -branch.length)
+}
+
+## Merge cluster data with temporal data
+for (i in seq_along(cluster_data)) {
+  cluster_data[[i]] <- merge(as_tibble(cluster_data[[i]][names(cluster_data[[i]]) %notin% "label"]), time.tree.data, by = c("parent", "node"), all.y=F)
+  ## May need to convert to Date format later, so adding decimals to tip dates will help.
+  cluster_data[[i]]$label <- format(lubridate::date_decimal(cluster_data[[i]]$label), "%Y-%m")
+} # End loop along cluster_data
+  
+
+## Save cluster_data to global environment
+assign("cluster_data", cluster_data, envir=globalenv())
+
+} # End dataManip() function
+
+## Now DYNAMITE determines if clusters are related by connecting the children of each cluster to the root of remaining clusters
+connectClust <- function(cluster_data) {
+
+cluster_data <- lapply(cluster_data, as_tibble)
+dup_cluster_data <- cluster_data
+full_tree <- as_tibble(sub_tree)
+
+for (i in seq_along(cluster_data)) {
+  cluster_data[[i]]$birth_origin <- NA
+  for (j in seq_along(dup_cluster_data[-i])) {
+    ## If the parent of origin node of one cluster (found by referencing full tree) is a child node in one of the other clusters... 
+    if (tidytree::parent(full_tree, dup_cluster_data[[j]]$parent[1])$parent %in% 
+      cluster_data[[i]]$node |
+      ## Or if the parent of the parent of the origin node of one cluster (found by referencing full tree) is a child node in one of the other clusters... (meaning clusters are allowed to be separated by up to two branches)
+      tidytree::parent(full_tree, 
+                  parent(full_tree, dup_cluster_data[[j]]$parent[1])$parent)$parent %in%
+      cluster_data[[i]]$node) {
+    cluster_data[[j]]$birth_origin == paste0("cluster_", cluster_data[[i]]$parent[1] )
+    } #End if statement
+  } # End for loop along duplicate list
+} # End for loop along original list
+assign("cluster_data", cluster_data, envir=globalenv())
+} #End connectClust function
+```
+
+Need a way to plot and visualize distributions of trait data here (WiP). Can we plot using the cluster_data as a list? Or more useful with a dataframe (see below)
+
+```{visualize}
+## The above list is useful for tree-based estimates, whereas the dataframe generated below might be more useful for distribution data
+visualizeData <- function(cluster_data) {
+## First creates a plot for trait distribution data
+cluster_data_df <- rbindlist(cluster_data, fill=T)
+non_traits_dates <- c("parent", "node", "branch.length")
+cluster_data_df <- select(cluster_data_df, time=label, everything(), -non_traits_dates) %>%
+  gather(key, value, -time, -cluster_id) %>% 
+     na.omit
+cluster_data_df$time <- as.Date(parse_date_time(cluster_data_df$time, "%y-%m"))
+
+
+nclusters <- length(unique(cluster_data_df$cluster_id))
+
+cluster_plot <- with(cluster_data_df,
+            by(cluster_data_df, key,
+               function (i) {
+    ggplot(data=i, aes(x=i$time, group=i$value, fill=i$value)) +
+#        geom_histogram(binwidth=365) +
+        geom_density(aes(y=..count..), alpha=0.5, trim=T, adjust=0.75) +
+# stat_density(aes(y=..count..), alpha=0.5, trim=T, na.rm=T) +
+                 facet_wrap(~i$cluster_id, nrow=nclusters, strip.position="left", scales="fixed") +
+                   xlab("Date") +
+                   ylab("Density") +
+                   labs(fill=paste(i$key)) +
+                   theme_bw() +
+                   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+               }))
+
+ ## Now plot this side-by-side with time-scaled tree and use shiny r to highlight specific time window in all plots (tree and distribution plots)
+cluster_data_df <- rbindlist(cluster_data, fill=T)
+tdf <- left_join(x=select(time.tree.data,-label), y=select(cluster_data_df, -label), by=c("parent", "node", "branch.length"), all.y=T)
+tdf <- left_join(x=tdf, y=select(as_tibble(sub_tree), -branch.length), all.y=T, by=c("parent", "node"))
+tdf <- as.treedata(tdf)
+
+
+ptree <- ggtree(tdf@phylo, mrsd=mrsd, as.Date=TRUE, aes(color=tdf@data$cluster_id)) + #%<+% tree_df +
+  theme_tree2() +
+#  scale_color_manual(values=c("black", "blue", "red")) +
+  #name="Cluster size (# nodes)") +
+#  scale_colour_brewer(palette="Reds", name="Cluster ID") +
+  geom_nodepoint(color="black", aes(subset = !isTip & as.numeric(tdf@phylo$node.label) > 90)) +
+  geom_label(aes(label = tdf@data$cluster_id, color = tdf@data$cluster_id), alpha=0.5) +
+  geom_point(aes(label = tdf@data$cluster_id, color = tdf@data$cluster_id), alpha = 0) +
+  theme(legend.position = "right", legend.background = element_rect(fill = "lightgray")) +
+  guides(colour = guide_legend("Cluster ID", override.aes = list(size = 7, alpha = 1))) +
+  scale_colour_grey(na.value="black")
+ 
+
+## Maybe add ptree to cluster_plot?
+final_plot <- append(cluster_plot, list(ptree))
+final_plot <- grid.arrange(grobs = final_plot, ncol = length(final_plot), widths = c(rep(3, length(final_plot)-1), 4))
+## It will probably be too big to save output in future
+ggsave("final_plot.png",  final_plot, width=11, height=8, units="in")
+
+# Next step is to add tree statistics and turn plotted grid into one that accepts pasted values for tree statistics Somthing like below:
+# library(gridExtra)
+# library(grid)
+## Not sure why this won't work...
+#s <- tableGrob(as.data.frame(merged_data))
+}
+```
+
+```{tree-based statistics}
+## Problem here in that clusters are no longer bifurcating - need to test the following scenarios:
+# adding node of 0 branch length
+# keeping original node (original branch length)
+# adding node with branch length = cutoff
+##############################################################
+#time.tree2<-read.tree(text=write.tree(time_tree)) # Not quite sure what this was all about.
+## if we want to test original branch length then better to use full tree in cluster_data_df instead
+###### Last stopped ###################################################################
+createArtificialBranches <- function(cluster) {
+
+current_parent <- as.numeric(1)
+parent=integer()
+node=integer()
+cluster_id=character()
+branch.length <- numeric()
+
+modified_cluster <- cluster
+
+  while(isTRUE(current_parent <= nrow(cluster))) {
+    if (length(which(cluster$parent==cluster$parent[current_parent]))==1) {
+      parent <- cluster$parent[current_parent]
+      node <- as.integer(sub_tree$Nnode*2+1+current_parent)
+      cluster_id <- cluster$cluster_id[current_parent]
+      branch.length <- 0
+  } # End if statement
+    new_row <- data.frame(parent=parent, node=node, cluster_id=cluster_id, branch.length=branch.length, stringsAsFactors = F)
+    modified_cluster<- merge(modified_cluster, new_row, all=T)
+    current_parent <- current_parent+1
+    new_row <- data.frame()
+} # End while statement
+return(modified_cluster)
+} # End function
+
+#root_row <- list()
+cluster_data_zero<-list()
+for (i in seq_along(cluster_data)) {
+  cluster_data_zero[[i]] <- createArtificialBranches(cluster_data[[i]])
+#   root_row[[i]] <- data.frame(parent = cluster_data_zero[[i]]$parent[1], node = cluster_data_zero[[i]]$parent[1], cluster_id = cluster_data_zero[[i]]$cluster_id[1], branch.length = NA)
+#   cluster_data_zero[[i]] <- merge(root_row[[i]], cluster_data_zero[[i]], all=T)
+ }
+names(cluster_data_zero) <- names(cluster_data)
+
+
+
+
+########################################################################################3
+# Transform clusters with artificial branch lengths at missing edges into treedata format for tree-based statistical analysis
+## Below won't work for some reason. The error throws "cannot find root"
+clust_trees <- cluster_data_zero
+# class(clust_trees) <- "multiphylo"
+for (i in seq_along(cluster_data_zero)){
+  clust_trees[[i]] <- as.treedata(as_tibble(cluster_data_zero[[i]]))
+  clust_trees[[i]]@phylo$edge.length <- clust_trees[[i]]@data$branch.length
+}
+
+## Create tree_stats for speciation rate and pybus gamma
+tree_stats <- data.frame(matrix(NA, nrow=length(names(clusters))+1, ncol=5))
+colnames(tree_stats) <- c('cluster_id', 'speciation_rate', 'Pybus_gamma', 'Ne', 'R0')
+
+## Skygrowth model
+calculateNe <- function(clust_tree) {
+  ci <- coalescent.intervals(clust_tree@phylo)
+  start_year <- min(clust_tree@data$label[!is.na(clust_tree@data$label)])
+  present_year <- max(clust_tree@data$label[!is.na(clust_tree@data$label)])
+  cl <- collapsed.intervals(ci)
+  sk1 <- skyline(cl,-1)
+  return(sk1$population.size)
+  # plot(sk1, show.years=TRUE, subst.rate=time_tree$mean.rate, present.year = present_year, xlim=c(start_year, present_year))
+}
+calculateR0 <- function(clust_tree, Ne){
+    nttd <- max(clust_tree@data$label) # This will need to be height from most recent sampled tip date in cluster
+    tips <- length(clust_tree@phylo$tip.label) # Number of tips
+    return(-log(Ne/(Ne*(tips-1)))/nttd) # This seems a bit too simple...I don't think this is correct. At all. Which Ne do we chose? The one at the end of the cluster?
+}
+
+
+
+
+
+for (i in seq_along(clust_trees)) {
+  ## Change labels back to numeric
+  clust_trees[[i]]@data$label <- year(as.Date(parse_date_time(clust_trees[[i]]@data$label, "%Y-%m")))
+  tree_stats$cluster_id[i] <- names(clust_trees)[[i]]
+  tree_stats$cluster_id[nrow(tree_stats)] <- "full_tree"
+  
+  tree_stats$speciation_rate[i] <- yule(clust_trees[[i]]@phylo)$lambda
+  tree_stats$speciation_rate[nrow(tree_stats)] <- yule(time_tree)$lambda
+  
+  tree_stats$Pybus_gamma[i] <- ltt(clust_trees[[i]]@phylo, plot=FALSE, gamma=TRUE)$gamma
+  tree_stats$Pybus_gamma[nrow(tree_stats)] <- ltt(time_tree, plot=FALSE, gamma=TRUE)$gamma
+  tree_stats$Ne[i] <- calculateNe(clust_trees[[i]])
+  ## Once finish skyline above, do not need to recalculate
+  tree_stats$Ne[nrow(tree_stats)] <- calculateNe(time.tree.phylo)
+  tree_stats$R0[i] <- calculateR0(clust_trees[[i]], tree_stats$Ne[i])
+}
+
+
+
+
+
+    
+
+
+
+
+
+# ## Create a data frame with info on how many clusters are birthed from single cluster ################################
+birth_summary <- cluster_data[ , c(.(parent = paste(parent, collapse=",")),
+                                  .(node = paste(node, collapse=","))), by = list(birth_origin, cluster_id, cluster_size)]
+birth_summary <- birth_summary %>%
+  group_by(birth_origin) %>%
+  filter(!is.na(birth_origin)) %>%
+  summarise(
+  clusters = list(cluster_id)
+)
+# for (i in 1:nrow(birth_summary)) {
+#   if (is.na(birth_summary$birth_origin[i])) {
+#     birth_summary$birth_origin[i] <- "I[ndep.]"
+#   }
+# }
+## Modify dataframe for later merging into single dataframe
+names(birth_summary) <- c("cluster_id", "birthed_clusters")
+birth_summary$CHAR <- "BIRTH"
+  
+##Create a dataframe with cluster-specific time information ############################################################
+time_info <- tree_df %>% 
+  group_by(cluster_id) %>%
+  filter(!is.na(cluster_id)) %>%
+  summarise(
+    time_start = min(node.date),
+    time_end = max(node.date)
+)
+
+## Create a data frame with lineages through time info #################################################################  
+# ltt_info <- tree_df %>% 
+#   group_by(cluster_id, node.date) %>%
+#   filter(!is.na(cluster_id)) %>%
+#   summarise(
+#     nodes = toString(c(unique(parent),unique(node)))
+#     )
+# ltt_info$lineages <- 0
+# 
+# for (i in 1:nrow(ltt_info)) {
+#   ltt_info$lineages[i] <- as.numeric(length(unique(unlist(stringi::stri_split(ltt_info$nodes[i],fixed=',')))))-1
+# }
+
+
+
+
+
+
+##Characterize dead clusters based on time of last remaining leaf (end time)  ############################################
+time_info$CHAR <- NA  
+for (i in 1:nrow(time_info)) {
+    if (as.numeric(time_info$time_end[i]) < mrsd) { ## Need to fix
+      time_info$CHAR[i] <- "DEAD"
+    } else {
+      time_info$CHAR[i] <- "ONGOING"
+    }
+  }
+
+
+## Merge dataframes #######################################################################################################
+merged_data <- Reduce(
+  function(...) merge(..., all = TRUE),
+  list(tree_stats, time_info, birth_summary)
+)
+
+
+merged_data$time_start[merged_data$cluster_id=="full_tree"]<-trunc(time_tree$timeOfMRCA)
+merged_data$time_end[merged_data$cluster_id=="full_tree"]<-"2015"
+merged_data$birthed_clusters[merged_data$cluster_id=="full_tree"]<-"all"
+
+
+
+
+```
+
+
+
+
+
+## Unfinished #################################################################################3
+#Plotting frequency of nodes over time
+ggplot(growth3, aes(x=as.numeric(as.character(Var1)),y=Freq)) +
+    labs(x="",y="Frequency") +
+  geom_line() +
+  geom_smooth(method="lm")
+lm(Freq~as.numeric(as.character(Var1)), data=growth3)
+
+
+
+  
+
+
+## Visualize all supported clades fragments (root-to-tip) on original tree
+#Map 
+  clade_map<-lapply(clades, function(x) {x['edges']})
+for (clade in 1:length(clade_map)) {
+  names(clade_map[[clade]]$edges)<-c('parent','node', 'branch.length', 'node.label')
+}
+
+clade_map<-reshape2:::melt.list(clade_map, id=c("parent", "node", "branch.length", "node.label"))
+clade_map<-clade_map[order(as.numeric(clade_map$L1)),]
+clade_map$L1<-paste("clade", as.character(clade_map$L1), sep='_')
+
+int_nodes<-clade_map2@data$node[complete.cases(clade_map2@data$L1) & clade_map2@data$node > 48 ]
+
+tree <- groupClade(clade_map2, .node=int_nodes)
+ggtree(tree, aes(color=group)) +
+  geom_text2(aes(subset = !isTip, label=group), nudge_x=0.0005)
+
+## Convert treedata back to data table                                   
+clade_map3<-as.data.table(clade_map2@data[complete.cases(clade_map2@data$parent.y),])   
+clade_map3
+dup_clade_map3<-clade_map3
+
+for (i in clade_map3) {
+  for (j in dup_clade_map3) {
+    if (i$node == j$parent.y) {
+      clade_map3[i]$
+    }
+  }
+}
+  
+  
+     
+
+```
+
+
+rt1 <- Sys.time()
+rt1-rt0
