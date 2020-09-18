@@ -60,7 +60,7 @@ Script will read in tree from directory based on a number of format
 checkFortree <- function(tree_file) {
   print("Make sure tree_file is scaled in substitutions/site and not in units of time.")
   # Check tree_file format -- either Newick or Nexus -- using suffices
-  if (endsWith(tree_file, "nwk") || endsWith(tree_file,"newick") || endsWith(tree_file,"tree_filefile")){
+  if (endsWith(tree_file, "nwk") || endsWith(tree_file,"newick") || endsWith(tree_file,"tree")){
     print(paste("Newick file detected:", tree_file, sep=" "), stderr())
     sub_tree <- read.tree(tree_file)
   } else if (endsWith(tree_file, "nex") || endsWith(tree_file,"nexus") || endsWith(tree_file, "nxs")){
@@ -79,6 +79,7 @@ sub_tree <- checkFortree(tree_file)
 ## Need to force binary tree and to replace zero branch lengths with full bootstrap support
 if (isFALSE(is.binary(sub_tree))) {
   sub_tree <- multi2di(sub_tree)
+  
   sub_tree$node.label[sub_tree$node.label==""] <- "100"
 } else {
   sub_tree <- sub_tree
@@ -93,7 +94,7 @@ if (isFALSE(is.binary(sub_tree))) {
 Script will first use least squares dating approach developed by To et al. (2016) in the package Rlsd2 (https://github.com/tothuhien/lsd2) to 1) find the optimal root position in the tree and 2) remove outliers with longer-than-expected (penalized) branch lengths, and 3) output both a timed tree and rooted substitutions/site tree to the global environment (updates sub_tree).
 
 Need to change this so that user prompted to specify date format!
-```{create time.tree}
+```{create time_tree}
 # Function to convert sub_tree to time_tree
 
 
@@ -187,10 +188,7 @@ We no longer have to worry about commented out section above because the maximum
 Following Ne estimation using skyride and definition of the exponential growth period, the maximum branch length (scaled in substitutions/site) during this period of time will be used as the cutoff to determine the incorporation of internal and external nodes into a "transmission cluster" throughout the remainder of the tree. The reasoning behind this is that, during this time, the internal nodes have a higher probability of being considered individuals involved in direct transmission than the remainder of the tree and enable us to define the maximum branch length as the median genetic distance separating direct transmission events. 
 
 Using a pre-order (root-to-tip) tree traversal, for each node, find subtrees/clades (>=3 nodes) for which cumulative mean branch, or edge, length is within the branch length limit at that level within the tree using the DYNAMITE algorithm. Note this should only be used with epidemics that are past the exponential phase of growth.
-```{find clusters using DYNAMITE}
-
-## Functions used in DYNAMITE cluster-picking algorithm ############################################################################
-
+```{Define clades}
 define.clades <- function(sub_tree) {
   ## Grab tree scaled in substitutions/site from time_tree ("intree") so that we know that node numbers line up later on when obtaining temporal information
   sub_tree <- sub_tree
@@ -204,7 +202,13 @@ define.clades <- function(sub_tree) {
   family_tree <- data.table::as.data.table(family_tree)
   assign("family_tree", family_tree, envir = globalenv())
   
-  supported_nodes <- family_tree# All of family_tree for simulations
+  supported_nodes <- list()
+  if(max(as.numeric(sub_tree$node.label)) >1) {
+  supported_nodes <- suppressWarnings(filter(family_tree, as.numeric(label) > 90))
+  } else {
+    supported_nodes <- suppressWarnings(filter(family_tree, as.numeric(label) > 0.90))
+  }
+  assign("supported_nodes", supported_nodes, envir = globalenv())  
   
   ## Creating a list for all sub_trees using the familyR package (get_children function)
   clades <- list()
@@ -228,9 +232,15 @@ define.clades <- function(sub_tree) {
   
   # Save to global environment or merge next function.
   assign("clades", clades, envir=globalenv())
-  
-  
+
 } # End defineClades function
+
+define.clades(sub_tree)
+```
+
+```{find clusters using DYNAMITE branch-wise algorithm}
+
+## Functions used in DYNAMITE cluster-picking algorithm ############################################################################
 findThreshold <- function(sub_tree) {
   sub_tree <- as.phylo(sub_tree)
   b0 <- BNPR(multi2di(sub_tree))
@@ -402,45 +412,8 @@ clusters_filled <- addLeaves(sub_tree, clusters)
 
 ```
 
-```{Calculate Re} 
-
-### Using skygrowth package to estimate Re (from Ne)
-calculateNe <- function(sub_tree) {
-  sub_tree2d <- multi2di(sub_tree)
-  b0 <- BNPR(sub_tree2d)
-  b0$data$E_log[b0$data$E_log<0] = 0
-  plot_BNPR( b0 )
-  p <- data.frame(time=rev(b0$data$time), Ne=b0$data$E_log)
-  return(p)
-}
-calculateRe <- function(Ne, conf.level=0.95) {
-  s <- 100 # sample size of 100
-  psi <- rnorm(s,0.00015, 0.00005) #Duration of infection range 3-8 days 
-  Z=qnorm(0.5*(1 + conf.level))
-  Re <- list()
-  for (i in 2:nrow(Ne)) {
-    time = Ne$time[i-1]
-    Re.dist = sample(1+psi*(Ne$nemed[i]-Ne$nemed[i-1])/((Ne$time[i]-Ne$time[i-1])*Ne$nemed[i-1]),
-                     size=10, replace=F)
-    logRe = log(Re.dist)
-    SElogRe = sd(logRe)/sqrt(10) # standard deviation of 2, sample size of 10
-    LCL = exp(mean(logRe) - Z*SElogRe) 
-    UCL = exp(mean(logRe) + Z*SElogRe) 
-    Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")")) 
-  }
-  Re <- do.call("rbind",Re)
-  #return(Re)
-}
-
-Re_full_tree <- calculateRe(Ne_full_tree, conf.level=0.95)
-```
-
-
-Using a depth-first algorithm developed by Prosperi et al., (2011), find subtrees/clades (>=2 nodes) for which median pairwise patristic distances (MPPD) is within 1-5% of the distribution of MPPDs of clades within the entire tree.
-```{find clusters using Phylopart}
-fastDist<-function(tree,sp1,sp2){
-  fastHeight(tree,sp1,sp1)+fastHeight(tree,sp2,sp2)-
-    2*fastHeight(tree,sp1,sp2)}
+Using a depth-first algorithm developed by Prosperi et al., (2011), find subtrees/clades (>=2 nodes) for which median pairwise patristic distances (MPPD) between nodes is within 1-5% of the distribution of MPPDs of clades within the entire tree.
+```{find clusters using Phylopart (clade-wise) algorithm}
 get.node.leaf.MPPD <- function(node,tree,distmat){
   nlist <- tips(tree,node)
   foo <- distmat[nlist,nlist]
@@ -528,6 +501,52 @@ merge.overlap.clust <- function(clusters) {
   
   return(result)
 }  # In case you want to remove this and consider only fully nested clusters
+# Different options below to force cluster into a tree for downstream analysis
+bifurcate <- function(sub_tree, clusters) {
+  results <- list()# Copy clusters list for ease
+  for (c in seq_along(clusters)) {
+    results[[c]] <- extract.clade(sub_tree, clusters[[c]]$from[1])
+    results[[c]] <- drop.tip(results[[c]], subset(results[[c]]$tip.label, results[[c]]$tip.label %notin% clusters[[c]]$label),
+                             trim.internal = FALSE,
+                             collapse.singles = TRUE)
+  } #End loop along clusters
+  # for (j in seq_along(results)) {
+  #   names(results)[[j]] <- paste0("c", j)
+  # }
+  return(results)
+} # End function
+pullClade <- function(sub_tree, clusters) {
+  results <- list()# Copy clusters list for ease
+  for (c in seq_along(clusters)) {
+    results[[c]] <- extract.clade(sub_tree, clusters[[c]]$from[1])
+  } #End loop along clusters
+  # for (j in seq_along(results)) {
+  #   names(results)[[j]] <- paste0("c", j)
+  # }
+  return(results)
+} # End function
+addLeaves <- function(sub_tree, clusters) {
+  sub_tree <- as_tibble(sub_tree)
+  x <- clusters  # Copy clusters list for ease
+  for (c in seq_along(x)) {
+    x[[c]] <- x[[c]] %>% dplyr::rename(parent=from, node=to) # comparison of clusters and subtree is based on same column names
+    for (node in 2:nrow(x[[c]])) {
+      if (length(x[[c]]$parent[x[[c]]$parent==x[[c]]$parent[node]]) == 1) { # For each row in a cluster, find parent nodes
+        ## that only have one edge (need two for downstream analysis)
+        p <- x[[c]]$parent[node]
+        n <- x[[c]]$node[node]
+        l <- as.data.frame(filter(sub_tree, parent == p & node != n)) ## Find the other edge in sub_tree
+        l$branch.length =
+          x[[c]]$branch.length[x[[c]]$parent == l$parent &
+                                 x[[c]]$node != l$node] ## Replace the current branch.length with the branch.length of the
+        ## other edge in the current list
+        x[[c]] <- rbind(x[[c]], l) ## Add the new edge to the current cluster
+      } # End if statement ## If no lonely edges, let the cluster list be itself
+    } # End loop along row
+  } # End loop along clusters
+  return(x)
+} # End function; this added articial leaves to create bifurcating tree, but changed to the bifurcate f(x) above, which just involes dropping tips.
+bifurcate f(x) above, which just involes dropping tips.
 ### Create matrix of each pairwise patristic distance for external leaves using the following
 leaves <- sample(sub_tree$tip.label, 0.50*length(sub_tree$tip.label))
 leaves <- expand.grid(leaves,leaves)
@@ -549,7 +568,7 @@ hist(distvec$MPPD)
 ## Determine MPPDs for all well-supported clades
 clade_MPPD <- pdist.clades(clades, sub_tree, mode='all')
 
-phylopart.threshold <- 0.15
+phylopart.threshold <- 0.10
 branch_length_limit <- quantile(distvec$MPPD, phylopart.threshold)
 
 clusters <- list()
@@ -560,15 +579,48 @@ for (clade in seq_along(clades)) {
 }
 clusters <- compact(clusters) %>%
   merge.nested.clust() %>%
-  merge.overlap.clust() %>%
-  merge.nested.clust() %>%
+#  merge.overlap.clust() %>% # Will not work well with support in labels
+#  merge.nested.clust() %>%
   list.filter(length(label) >= 5)
 
+clusters_filled <- addLeaves(sub_tree, clusters)
 
-
-clusters_filled <- clusters
 ```
 
+
+
+```{Calculate Re} 
+
+### Using skygrowth package to estimate Re (from Ne)
+calculateNe <- function(sub_tree) {
+  sub_tree2d <- multi2di(sub_tree)
+  b0 <- BNPR(sub_tree2d)
+  b0$data$E_log[b0$data$E_log<0] = 0
+  plot_BNPR( b0 )
+  p <- data.frame(time=rev(b0$data$time), Ne=b0$data$E_log)
+  return(p)
+}
+calculateRe <- function(Ne, conf.level=0.95) {
+  s <- 100 # sample size of 100
+  psi <- rnorm(s,0.00015, 0.00005) #Duration of infection range 3-8 days 
+  Z=qnorm(0.5*(1 + conf.level))
+  Re <- list()
+  for (i in 2:nrow(Ne)) {
+    time = Ne$time[i-1]
+    Re.dist = sample(1+psi*(Ne$nemed[i]-Ne$nemed[i-1])/((Ne$time[i]-Ne$time[i-1])*Ne$nemed[i-1]),
+                     size=10, replace=F)
+    logRe = log(Re.dist)
+    SElogRe = sd(logRe)/sqrt(10) # standard deviation of 2, sample size of 10
+    LCL = exp(mean(logRe) - Z*SElogRe) 
+    UCL = exp(mean(logRe) + Z*SElogRe) 
+    Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")")) 
+  }
+  Re <- do.call("rbind",Re)
+  #return(Re)
+}
+
+Re_full_tree <- calculateRe(Ne_full_tree, conf.level=0.95)
+```
 
 Load metadata and employ ancestral state reconstruction of traits. This code is not working. Can't get second part of checkforMetaData code to function after first. 
 ```{ASR}
