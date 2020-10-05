@@ -3,12 +3,6 @@ title: "R Notebook"
 output: html_notebook
 note: under development
 ---
-```{tmp working files and dir}
-## Working files to test dynamite
-#setwd("/Users/macbook/Dropbox (UFL)/DYNAMITE/HIVdynamite/training_data")
-#filename <- "B.JP_NCC_LANL.nwk"
-
-```
 
 Install and load necessary packages
 ```{install required libraries}
@@ -50,7 +44,8 @@ tree_file = as.numeric(args[1])
 metadata_file = as.numeric(args[2])
 seqLen = as.numeric(args[3])
 picking_algo = as.numeric(args[4])
-asr_arg = args[5]
+#asr_arg = args[5]
+asr_arg="Y"
 numCores = detectCores()
 ```
 
@@ -102,6 +97,7 @@ Need to change this so that user prompted to specify date format!
 checkForDates <- function(sub_tree) {
   write("If using taxa names for date information, please make sure dates are in numeric/decimal format. If not, please use lubridate package (date_decimal() function to convert dates to numeric form or upload dates table.")
   metadata <- try(read.table(file=metadata_file, sep='\t', header=T, colClasses = "character"))
+  metadata <- metadata[metadata[,1] %in% sub_tree$tip.label,] # Make sure to only include taxa represented in tree.
   assign("metadata", metadata, envir=globalenv())
   if ("try-error" %in% class(metadata)) {
       date.preceding <- readline(prompt="What character always precedes the date in taxa names?")
@@ -181,6 +177,7 @@ findMRSD(time_tree)
 
 ```
 
+Find all well-supported clades
 ```{Define clades}
 define.clades <- function(sub_tree) {
   ## Grab only subtrees that are supported by bootstrap values >90
@@ -412,7 +409,7 @@ clusters_filled <- addLeaves(sub_tree, clusters)
 
 ```
 
-Using a depth-first algorithm developed by Prosperi et al., (2011), find subtrees/clades (>=2 nodes) for which median pairwise patristic distances (MPPD) between nodes is within 1-5% of the distribution of MPPDs of clades within the entire tree.
+Alternatively, using a depth-first algorithm developed by Prosperi et al., (2011), find subtrees/clades (>=2 nodes) for which median pairwise patristic distances (MPPD) between nodes is within 1-5% of the distribution of MPPDs of clades within the entire tree.
 ```{find clusters using Phylopart (clade-wise) algorithm}
 phylopart <- function(sub_tree) {
   get.node.leaf.MPPD <- function(node,tree,distmat){
@@ -666,7 +663,7 @@ Data manipulation for characterization of clusters and export of data for visual
 ```{data manipulation} 
 
 ## Merge metadata with cluster data
-dataManip <- function(clusters, asr) {
+dataManip <- function(clusters) {
 
 ## Need to convert clusters to list if only a single cluster found (will be in dataframe format, rather than list)
 
@@ -686,12 +683,14 @@ if (class(clusters) == "data.frame") {
       dplyr::select(parent, everything())
   })
   } else {
-  
-     cluster_data <- lapply(clusters, function(x) {
-        dplyr::rename(x, parent = "from", node = "to") %>%
-        dplyr::select(parent, everything()) %>%
-        merge(x, data.frame(node=dplyr::select(node_dates,node), 
-                            date=dplyr::select(node_dates, x)), by="node")
+    
+    ## Need to create simething similar to asr table for tips only
+    
+     cluster_data <- lapply(clusters, function(y) {
+       dplyr::rename(y, parent = "from", node = "to") %>%
+         dplyr::select(parent, everything()) %>%
+         left_join(., dplyr::select(node_dates, node, x), by="node") %>%
+         dplyr::rename(date=x)
   })
 }
 
@@ -699,7 +698,7 @@ return(cluster_data)
 
 } # End dataManip() function
 
-cluster_data <- dataManip(clusters, asr)
+cluster_data <- dataManip(clusters)
 
 ## Now DYNAMITE determines if clusters are related by connecting the children of each cluster to the root of remaining clusters
 connectClust <- function(cluster_data) {
@@ -770,7 +769,7 @@ calculateRe <- function(Ne, conf.level=0.95) {
       UCL = exp(mean(logRe) + Z*SElogRe) 
       Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")"))
     }
-  } else {Re[[i-1]] <- NULL}
+  } else {Re <- list(NULL)}
   Re <- do.call("rbind",Re)
 }
 
@@ -778,11 +777,11 @@ Ne_fulltree <- calculateNe(time_tree)
 Re_fulltree <- calculateRe(Ne_fulltree)
 
 gatherStats <- function(cluster) {
-  tmp <- extract.clade(time_tree, cluster$parent[1])
+  tmp <- keep.tip(time_tree, cluster$node)
   speciation_rate <-yule(as.phylo(tmp))$lambda
   Pybus_gamma <- ltt(as.phylo(tmp), plot=FALSE, gamma=TRUE)$gamma ## Maybe also consider plottng full ltt as well?
   Ne <- calculateNe(as.phylo(tmp))
-  Re <- calculateRe(as.phylo(tmp))
+  Re <- calculateRe(Ne, conf.level = 0.95)
   
   TMRCA <- min(cluster$date)
   timespan <- max(cluster$date) - min(cluster$date)
