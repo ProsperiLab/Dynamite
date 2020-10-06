@@ -98,7 +98,7 @@ Script will first use least squares dating approach developed by To et al. (2016
 Need to change this so that user prompted to specify date format!
 ```{create time_tree}
 # Function to convert sub_tree to time_tree
-write("Converting substitution tree in to timed tree using lsd2 and dates provided in metadata file. Please make sure the metadata file contains IDs in the first column and dates in the second column. All other columns can be filled as desired...")
+write("Converting substitution tree into timed tree using lsd2 and dates provided in metadata file. Please make sure the metadata file contains IDs in the first column and dates in the second column. All other columns can be filled as desired...")
 checkForDates <- function(sub_tree) {
   metadata <- try(read.table(file=metadata_file, sep='\t', header=T, colClasses = "character"))
   metadata <- metadata[metadata[,1] %in% sub_tree$tip.label,] # Make sure to only include taxa represented in tree.

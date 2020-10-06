@@ -7,7 +7,9 @@ setwd(getSrcDirectory()[1]) #When working on the cluster
 rt0 <- Sys.time()
 
 # List of packages for session
-.packages <-  c("phytools", "phylodyn", "data.tree", "tidytree", "rlist", "familyR", "tidyverse", "ggplot2", "gridExtra", "ggtree", "drc", "paleotree", "remotes", "growthrates", "drc", "phangorn", "parallel", "lubridate", "geiger", "tibble") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
+.packages <-  c("remotes", "phytools", "data.tree", 
+                "tidytree", "rlist", "familyR", "tidyverse", 
+                "ggtree", "parallel", "geiger", "tibble")  # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
 github_packages <- c("mrc-ide/skygrowth", "tothuhien/Rlsd2") # mrc-ide/skygrowth, "mdkarcher/phylodyn" may need to be done if we think our Re values are going to be greater than 5 for any cluster! If the latter, need aslo install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 
 ## Will need to remove install section if using on cluster ###################################
@@ -79,7 +81,7 @@ if (isFALSE(is.binary(sub_tree))) {
 
 #Script will first use least squares dating approach developed by To et al. (2016) in the package Rlsd2 (https://github.com/tothuhien/lsd2) to 1) find the optimal root position in the tree and 2) remove outliers with longer-than-expected (penalized) branch lengths, and 3) output both a timed tree and rooted substitutions/site tree to the global environment (updates sub_tree).
 # Function to convert sub_tree to time_tree
-write("Converting substitution tree in to timed tree using lsd2 and dates provided in metadata file. Please make sure the metadata file contains IDs in the first column and dates in the second column. All other columns can be filled as desired...")
+write("Converting substitution tree into timed tree using lsd2 and dates provided in metadata file. Please make sure the metadata file contains IDs in the first column and dates in the second column. All other columns can be filled as desired...")
 checkForDates <- function(sub_tree) {
   metadata <- try(read.table(file=metadata_file, sep='\t', header=T, colClasses = "character"))
   metadata <- metadata[metadata[,1] %in% sub_tree$tip.label,] # Make sure to only include taxa represented in tree.
