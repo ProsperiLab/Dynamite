@@ -13,7 +13,11 @@ setwd(getSrcDirectory()[1]) #When working on the cluster
 rt0 <- Sys.time()
 
 # List of packages for session
-.packages <-  c("phytools", "phylodyn", "data.tree", "tidytree", "rlist", "familyR", "tidyverse", "ggplot2", "gridExtra", "ggtree", "drc", "paleotree", "remotes", "growthrates", "drc", "phangorn", "parallel", "lubridate", "geiger", "tibble") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
+.packages <-  c("remotes", "phytools", "data.tree", "tidytree", "rlist", "familyR", "tidyverse", "ggtree", "parallel", "geiger", "tibble") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
+
+## Do we really need phangorn?
+
+## Needed for branchwise algorithm, depending on what we go with: "growthrates", "drc", "paleotree", "quantmod", "phylodyn"
 github_packages <- c("mrc-ide/skygrowth", "tothuhien/Rlsd2") # mrc-ide/skygrowth, "mdkarcher/phylodyn" may need to be done if we think our Re values are going to be greater than 5 for any cluster! If the latter, need aslo install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 
 ## Will need to remove install section if using on cluster ###################################
@@ -829,8 +833,8 @@ cluster_stats <- lapply(cluster_data, gatherStats)
 Visualization is based on the resulting list (per cluster) of data
 ```{export for visualization}
 
-write("Data are now being exported as 'cluster_data.RDS' and 'tree_data.tree.'")
-saveRDS(cluster_stats, "cluster_data.RDS")
+write("Data are now being exported as 'result_data.RDS' and 'result_tree.tree.'")
+saveRDS(cluster_stats, "result_data.RDS")
 
 # test <- cluster_list[[1]][[1]][[2]]
 # test$trait <- as.factor(test$trait)
@@ -860,7 +864,7 @@ exportTree <- function(time_tree, cluster_data) {
   return(t2)
 }
 exported_tree <- exportTree(time_tree, cluster_data)
-write.beast(exported_tree, "tree_data.tree")
+write.beast(exported_tree, "result_tree.tree")
 
 rt1 <- Sys.time()
 rt1-rt0
