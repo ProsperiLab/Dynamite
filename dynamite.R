@@ -41,8 +41,12 @@ seqLen = as.numeric(args[3])
 picking_algo = "c"
 #asr_arg = args[5]
 asr_arg="Y"
-numCores = detectCores()
+threshold=as.numeric(0.10)
 
+numCores = try(Sys.getenv("SLURM_CPUS_ON_NODE"))
+if (numCores == "") {
+  numCores = detectCores()
+}
 
 # Script will read in tree from directory based on a number of format
 # Function to read Nexus files or Newick files 
@@ -75,9 +79,6 @@ if (isFALSE(is.binary(sub_tree))) {
   sub_tree <- sub_tree
 }
 
-#Randomly subsampling tree to make it manageable
-#rtips <- sample(sub_tree$tip.label, 10800)
-#sub_tree <- drop.tip(sub_tree, rtips)
 
 #Script will first use least squares dating approach developed by To et al. (2016) in the package Rlsd2 (https://github.com/tothuhien/lsd2) to 1) find the optimal root position in the tree and 2) remove outliers with longer-than-expected (penalized) branch lengths, and 3) output both a timed tree and rooted substitutions/site tree to the global environment (updates sub_tree).
 # Function to convert sub_tree to time_tree
@@ -195,11 +196,11 @@ define.clades <- function(sub_tree) {
   } # End loop along clades
   ## Restructure list of clades for easy visualization and manipulation and remove
   ## Zeroth level (contains root branch length) from first clade (full tree) if exists
-  clades <- lapply(clades, function(x) {
+  clades <- mclapply(clades, function(x) {
     dplyr::select(x, from, everything()) %>%
       arrange(level) %>%
       filter(!level==0)
-  }) %>%
+  }, mc.cores=numCores) %>%
     list.filter(from[1] != rootnode(sub_tree)) # Whole tree is included because support is alwasy 100% for root, so discard# End loop along clades
   
   # Save to global environment or merge next function.
@@ -468,10 +469,10 @@ phylopart <- function(tree) {
     } # End loop along copy
   } # End loop along true
   result <- setdiff(clusters, Filter(Negate(function(x) is.null(unlist(x))), unwanted)) %>%
-    lapply(., function(x){
+    mclapply(., function(x){
       dplyr::select(x, from, to, branch.length, label) %>%
         dplyr::arrange(from,to) 
-    }) %>%
+    }, mc.cores=numCores) %>%
     unique()
   
   return(result)
@@ -497,7 +498,7 @@ phylopart <- function(tree) {
   ## Determine MPPDs for all well-supported clades
   clade_MPPD <- pdist.clades(clades, tree, mode='all')
 
-  phylopart.threshold <- 0.10
+  phylopart.threshold <- threshold
   branch_length_limit <- quantile(distvec$MPPD, phylopart.threshold)
 
   clusters <- list()
@@ -609,7 +610,7 @@ for (i in seq_along(anc.states)) {
 
 ## For now, best to only assign one state (per trait) per node, rather than probabilities, and, in order to incorporate uncertainty, we will assign "NEI" (Not Enough Info) to any node with <90% posterior probability of any given state.
 
-anc.states <- lapply(anc.states, function(x) {
+anc.states <- mclapply(anc.states, function(x) {
   gather(x, trait, pr, -node) %>%
     group_by(node) %>%
     dplyr::mutate(max_pr = max(pr)) %>% ## Determine if reliable state found for each node using max probability
@@ -626,7 +627,7 @@ anc.states <- lapply(anc.states, function(x) {
       ## Need to change node back to integer to integrate with data downstream
 #    anc.states[[i]]$to <- as.integer(anc.states[[i]]$to)
 #    anc.states[[i]] <- anc.states[[i]][order(anc.states[[i]]$to),]
-}) # End loop among ancestral states
+}, mc.cores=numCores) # End loop among ancestral states
 
 return(anc.states)
 } # End asrClusters function on traits
@@ -661,21 +662,21 @@ if (class(clusters) == "data.frame") {
     asr2 <- bind_rows(asr, .id = "field")
     asr2$to <- as.integer(asr2$to)
 
-  cluster_data <- lapply(clusters, function(x) {
+  cluster_data <- mclapply(clusters, function(x) {
     merge(x, asr2, by = "to") %>%
       dplyr::rename(parent = "from", node = "to") %>%
       dplyr::select(parent, everything())
-  })
+  }, mc.cores=numCores)
   } else {
     
     ## Need to create simething similar to asr table for tips only
     
-     cluster_data <- lapply(clusters, function(y) {
+     cluster_data <- mclapply(clusters, function(y) {
        dplyr::rename(y, parent = "from", node = "to") %>%
          dplyr::select(parent, everything()) %>%
          left_join(., dplyr::select(node_dates, node, x), by="node") %>%
          dplyr::rename(date=x)
-  })
+  }, mc.cores=numCores)
 }
 
 return(cluster_data)
@@ -687,7 +688,7 @@ cluster_data <- dataManip(clusters)
 ## Now DYNAMITE determines if clusters are related by connecting the children of each cluster to the root of remaining clusters
 connectClust <- function(cluster_data) {
 
-cluster_data <- lapply(cluster_data, as_tibble)
+cluster_data <- mclapply(cluster_data, as_tibble, mc.cores=numCores)
 dup_cluster_data <- cluster_data
 full_tree <- as_tibble(sub_tree)
 
@@ -774,9 +775,9 @@ gatherStats <- function(cluster) {
     dplyr::group_by(field) %>%
     dplyr::group_split()
 
-  fields <- do.call(rbind, lapply(distdata, function(x) {
+  fields <- do.call(rbind, mclapply(distdata, function(x) {
     x$field[1]
-  })) ## For some reason order is not the same as order of column names in metadata
+  }, mc.cores=numCores)) ## For some reason order is not the same as order of column names in metadata
 
   names(distdata) <- fields
 
@@ -797,7 +798,7 @@ gatherStats <- function(cluster) {
   return(tibble::lst(distdata, TMRCA, timespan, cluster_origin, speciation_rate, Pybus_gamma, Ne, Re, dynamics))
 }
 
-cluster_stats <- lapply(cluster_data, gatherStats)
+cluster_stats <- mclapply(cluster_data, gatherStats, mc.cores=numCores)
 
 # Visualization is based on the resulting list (per cluster) of data
 
