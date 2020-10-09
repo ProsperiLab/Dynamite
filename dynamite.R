@@ -34,8 +34,8 @@ options(digits=15)
 
 # Supply tree and metadata table as arguments
 args = commandArgs(trailingOnly=TRUE)
-tree_file = as.numeric(args[1])
-metadata_file = as.numeric(args[2])
+tree_file = args[1]
+metadata_file = args[2]
 seqLen = as.numeric(args[3])
 #picking_algo = as.character(args[4])
 picking_algo = "c"
@@ -521,7 +521,7 @@ if (picking_algo == "b") {
   if (picking_algo == "c") {
     clusters <- phylopart(sub_tree)
   } else {
-    write("Incorrect cluster_picking algorithm choice. Please choose between "b" (branch-wise) or "c" (clade-wise) and run script again.")
+    write("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")
   }
 }
 
