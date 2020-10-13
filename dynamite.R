@@ -223,8 +223,8 @@ define.clades(sub_tree)
 ## Functions used in DYNAMITE cluster-picking algorithm ############################################################################
 branchWise <- function(tree) {
   findThreshold <- function(tree) {
-  sub_tree <- as.phylo(sub_tree)
-  b0 <- BNPR(multi2di(sub_tree))
+  sub_tree <- as.phylo(tree)
+  b0 <- BNPR(multi2di(tree))
   b0$data$E_log[b0$data$E_log<0] = 0
   plot_BNPR( b0 )
   p <- data.frame(time=rev(b0$data$time), Elog=b0$data$E_log)
@@ -237,7 +237,7 @@ branchWise <- function(tree) {
   d1 <- data.frame(x=dX, y=dY)
   d1$x[which.max(d1$y)] # This is slightly less than the inflection point, which is 50% of time
   
-  time_epi_peak <- max(nodeHeights(sub_tree, root.edge=TRUE)) - d1$x[which.max(d1$y)]
+  time_epi_peak <- max(nodeHeights(tree, root.edge=TRUE)) - d1$x[which.max(d1$y)]
   
   # fit <- fit_easylinear(p2$`rev(b0$x)`, p2$`1`, quota=0.99) #Foound this to be the best, except when prob_exit and p_trans are both high
   # plot(fit)
@@ -385,7 +385,7 @@ if (nrow(sub_clade) == 0) {
     ## Remove singleton nodes (non-bifurcating branches) by using bifurcate() function or extracting entire clade.
     #clusters <- bifurcate(sub_tree, clusters)
     #clusters <- pullClade(sub_tree, clusters)
-  clusters <- addLeaves(sub_tree, clusters)
+  clusters <- addLeaves(tree, clusters)
   
   return(clusters)
 }
