@@ -7,7 +7,7 @@ setwd(getSrcDirectory()[1]) #When working on the cluster
 rt0 <- Sys.time()
 
 # List of packages for session
-.packages <-  c("remotes", "phytools", "data.tree", 
+.packages <-  c("optparse", "remotes", "phytools", "data.tree", 
                 "tidytree", "rlist", "familyR", "tidyverse", 
                 "ggtree", "parallel", "geiger", "tibble")  # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
 github_packages <- c("mrc-ide/skygrowth", "tothuhien/Rlsd2") # mrc-ide/skygrowth, "mdkarcher/phylodyn" may need to be done if we think our Re values are going to be greater than 5 for any cluster! If the latter, need aslo install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
@@ -26,6 +26,28 @@ if(length(github_packages[!.inst_github]) > 0) try(devtools::install_github(gith
 lapply(.packages, require, character.only=TRUE)
 lapply(gsub(".+\\/(.+)", "\\1", github_packages), require, character.only=TRUE)
 
+option_list = list(
+  make_option(c("-t", "--tree"), type="character", default=list.files(pattern = "*.nwk")[[1]], 
+              help="tree file name [default= .nwk extension]", metavar="character"),
+  make_option(c("-m", "--metadata"), type="character", default=list.files(pattern="*.tab")[[1]], 
+              help="metadata file name [default= .tab extension]", metavar="character"),
+  make_option(c("-s", "--seqLen"), type="numeric", default=30000, 
+              help="sequence length [default= 30000]", metavar="numeric"),
+  make_option(c("-a", "--cluster"), type="character", default=list.files(pattern="*results.csv")[[1]], 
+              help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= phylopart]", metavar="character"),
+  make_option(c("-asr", "--asr"), type="character", default="N", 
+              help="option of ancestral state reconstruction for each cluster [default= N]", metavar="character"),
+); 
+
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
+
+
+if (is.null(opt$file)){
+  print_help(opt_parser)
+  stop("At least one argument must be supplied (input file).n", call.=FALSE)
+}
+
 # Additional options
 `%notin%` <- Negate(`%in%`) # Just plain useful
 # The option below is useful when dealing with dates of internal nodes downstream
@@ -33,14 +55,6 @@ options(digits=15)
 
 
 # Supply tree and metadata table as arguments
-args = commandArgs(trailingOnly=TRUE)
-tree_file = args[1]
-metadata_file = args[2]
-seqLen = as.numeric(args[3])
-#picking_algo = as.character(args[4])
-picking_algo = "c"
-#asr_arg = args[5]
-asr_arg="Y"
 threshold=as.numeric(0.10)
 
 numCores = try(Sys.getenv("SLURM_CPUS_ON_NODE"))
@@ -68,7 +82,7 @@ checkFortree <- function(tree_file) {
     #assign("sub_tree_file", sub_tree_file, envir=globalenv())
   return(sub_tree)
 }# end checkfortree_file function
-sub_tree <- checkFortree(tree_file)
+sub_tree <- checkFortree(opt$tree)
 
 ## Need to force binary tree and to replace zero branch lengths with full bootstrap support
 if (isFALSE(is.binary(sub_tree))) {
@@ -80,43 +94,52 @@ if (isFALSE(is.binary(sub_tree))) {
 }
 
 
+
+message("Searching for metadata file...")
+metadata <- read.table(opt$metadata, sep = '\t', header=T, stringsAsFactors = F) %>%
+  dplyr::filter(ID %in% tree$tip.label)
+
 #Script will first use least squares dating approach developed by To et al. (2016) in the package Rlsd2 (https://github.com/tothuhien/lsd2) to 1) find the optimal root position in the tree and 2) remove outliers with longer-than-expected (penalized) branch lengths, and 3) output both a timed tree and rooted substitutions/site tree to the global environment (updates sub_tree).
 # Function to convert sub_tree to time_tree
 write("Converting substitution tree into timed tree using lsd2 and dates provided in metadata file. Please make sure the metadata file contains IDs in the first column and dates in the second column. All other columns can be filled as desired...")
-checkForDates <- function(sub_tree) {
-  metadata <- try(read.table(file=metadata_file, sep='\t', header=T, colClasses = "character"))
-  metadata <- metadata[metadata[,1] %in% sub_tree$tip.label,] # Make sure to only include taxa represented in tree.
-  assign("metadata", metadata, envir=globalenv())
-  # if ("try-error" %in% class(metadata)) {
-  #     date.preceding <- readline(prompt="What character always precedes the date in taxa names?")
-  #     date.preceding <- paste0("\\",date.preceding)
-  #     sts <- setNames(as.numeric(gsub(paste0("^.*", date.preceding, "([0-9]{4}[\\.0-9]*)", ".*$"), "\\1", sub_tree$tip.label)), sub_tree$tip.label)
-        # if (class(sts) == "integer") {
-        #   sts <- as.Date(ISOdate(sts, 1, 1))
-        # } else if (class(sts) == "numeric") {
-        # sts <- as.Date(as.character(sts))
-        # } # End integer vs numeric if statement
-#  } else {
-    sts <- metadata[,2] # Get rid of header line
-        if (class(sts) == "integer") {
-          sts <- as.Date(ISOdate(sts))
-        } else if (class(sts) == "numeric") {
-          sts <- as.Date(date_decimal(sts))
-        } else if (class(sts) == "character") {
-          sts <- as.Date(sts)
-        } # if-else statement
-    sts <- setNames(sts, metadata[,1])
-
- # }
-
-
+checkForDates <- function(metadata) {
+  for (i in seq_along(colnames(metadata))) {
+    if (tryCatch({
+      isTRUE(any(grepl("id", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
+      colnames(metadata)[i] <- "ID"
+    } #end first ef statement
+    if (tryCatch({
+      isTRUE(any(grepl("date", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
+      colnames(metadata)[i] <- "DATE"
+    } # End second if statement
+  } # End for loop
+ 
+  assign("metadata", metadata, envir = globalenv())
+  createSTS <- function(metadata_mod) {
+    date_range <- seq(as.Date("12/01/2019", "%d/%m/%Y"), as.Date(Sys.Date(), "%d/%m/%Y"), by="day")
+    sts <- metadata_mod$DATE
+    if (class(sts) == "integer") {
+      sts <- as.Date(ISOdate(sts))
+    } else if (class(sts) == "numeric") {
+      sts <- as.Date(date_decimal(sts))
+    } else if (class(sts) == "character") {
+      sts <- as.Date(sts, tryFormats = c("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y", "%d/%m/%Y", "%d-%m-%Y"))
+      if (min(sts) < min(date_range)) { # Attempt to correct if in wrong format, which we will know if the first date is before Dec 2019
+        sts <- as.Date(sts, "%d/%m/%Y")
+      }
+    } # if-else statement
+    sts <- setNames(sts, metadata$ID)
+    return(sts)
+  }
+  sts <- createSTS(metadata)
+   
   ## Checkpoint
 #  if (isTRUE(max(as.Date(ISOdate(sts, 1, 1)))> Sys.Date())) {
     if (isTRUE(max(sts) > Sys.Date())) {
 
     write(paste("The following sequences likely have incorret dates:",
                   return(sts[sts==max(sts)]),
-    "Please start DYNAMITE again, placing a .tab metadata file (with dates as second column) with correct information in current folder, and DYNAMITE will read it.",
+    "Please start DYNAMITE again, placing a .tab metadata file with consistent date information in current folder.",
                   sep=" "))
     stop()
   } # End checkpoint if statement
@@ -142,7 +165,7 @@ DateTree <- function(sub_tree, seqLen) {
   # assign("time_tree_data", result$dateNexusTreeFile, envir=globalenv()) ## Something wrong with node numbers in this tree, so grab from time_tree
   assign("tmrca", result$tMRCA, envir=globalenv())
 }# End DateTree function
-DateTree(sub_tree, seqLen)
+DateTree(sub_tree, opt$seqLen)
 
 # Function to specify most recent sampling date (mrsd)
 findMRSD <- function(time_tree) {
@@ -516,10 +539,10 @@ return(clusters)
 }
 
 write("Picking clusters based on user choice of algorithm....")
-if (picking_algo == "b") {
+if (opt$cluster == "b") {
   clusters <- branchWise(sub_tree)
 } else {
-  if (picking_algo == "c") {
+  if (opt$cluster == "c") {
     clusters <- phylopart(sub_tree)
   } else {
     write("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")
@@ -633,11 +656,11 @@ return(anc.states)
 } # End asrClusters function on traits
 
 write("Performinc ancestral state reconstruction...")
-if (asr_arg == "Y"){
+if (opt$asr == "Y"){
 write("ASR performed using the empirical Bayesian method.")
   asr <- ancStateRecon(sub_tree, metadata) #traits
 } else {
-  if (asr_arg == "N"){
+  if (opt$asr == "N"){
   write("ASR not performed - results will rely on sampling dates.")
 } else {
   write("Correct response not detected.")
