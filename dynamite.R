@@ -33,7 +33,7 @@ option_list = list(
               help="metadata file name [default= .tab extension]", metavar="character"),
   make_option(c("-s", "--seqLen"), type="numeric", default=30000, 
               help="sequence length [default= 30000]", metavar="numeric"),
-  make_option(c("-a", "--cluster"), type="character", default=list.files(pattern="*results.csv")[[1]], 
+  make_option(c("-a", "--cluster"), type="character", default="c", 
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= phylopart]", metavar="character"),
   make_option(c("-asr", "--asr"), type="character", default="N", 
               help="option of ancestral state reconstruction for each cluster [default= N]", metavar="character"),
