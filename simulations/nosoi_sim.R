@@ -3,7 +3,8 @@ rm(list=ls())
 
 #setwd("/Users/macbook/Dropbox (UFL)/DYNAMITE/HIVdynamite/nosoi_simulations")
 # List of packages for session
-.packages <-  c("phytools", "ape", "parallel", "ggplot2", "viridis", "igraph", "ggnetwork", "ggpubr", "ggtree", "treeio", "ape", "remotes", "dplyr", "plyr") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
+.packages <-  c("phytools", "ape", "parallel", "ggplot2", "viridis", "igraph", "ggnetwork", 
+                "ggpubr", "ggtree", "treeio", "ape", "remotes", "dplyr", "plyr", "phyclust") 
 github_packages <- c("slequime/nosoi", "emillykkejensen/familyR") 
 
 # Install CRAN packages (if not already installed)
@@ -30,7 +31,7 @@ numCores = detectCores()
 
 
 ## Matrix generation #######################################################################
-traits <- data.frame(location=rbind('A','B','C', 'D', 'E'))
+traits <- data.frame(location=rbind('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'))
 Q <-list()
 for (column in 1:ncol(traits)) {
   suppressWarnings({ ## We know it fills diagonals with NAs
@@ -42,14 +43,15 @@ for (column in 1:ncol(traits)) {
   Q[[column]][lower.tri(Q[[column]])] <- non.diag
   Q[[column]][upper.tri(Q[[column]])] <- non.diag
   colnames(Q[[column]]) <- rownames(Q[[column]]) <- unique(traits[,column])
-  ## Modify Q matrix to allow for birth of cluster F from cluster E
-#  Q[[column]][4,] <- c(rep(0.0, 4),1.0) # E only gives rise to F
-#  Q[[column]][1,] <- c(0.0,rep(1/3,3),0.0) # A cannot give rise to F; the remaining clusters can stay at 0.2 because they have a 0 probability of leaving (see below)
-}
+  ## Modify Q matrix to allow for birth of cluster I from cluster H
+  Q[[column]][nrow(traits)-1,] <- c(rep(0.0, nrow(traits)-1),1.0) # E only gives rise to F
+  Q[[column]][1,] <- c(0.0,rep(1/(nrow(traits)-2),nrow(traits)-2),0.0) # A cannot give rise to I; the remaining clusters can stay at 0.125 because they have a 0 probability of leaving (see below)
+  }
 
 
 Q <- plyr::compact(Q)
 names(Q) <- colnames(traits[-1])
+Q
 
 
 # OR
@@ -71,7 +73,7 @@ p_Exit_fct  <- function(t, t_sero){
   if(t > t_sero){p=0.95} 
   return(p)
 }
-t_sero_fct <- function(x){rnorm(x,14,3)} #Approximately 14 days
+t_sero_fct <- function(x){rnorm(x,14,2)} #Approximately 14 days
 
 #pMove probability (per unit of time) for a host to do move, i.e. to leave its current state (for example, leaving state “A”). 
 #It should not be confused with the probabilities extracted from the structure.matrix, which represent the probability to go 
@@ -82,22 +84,26 @@ p_Move_fct  <- function(t, current.in, host.count){
   if(current.in=="A" & host.count >= 2){return(0.00075)} # Wait a couple of weeks before initiation of clusters
   if(current.in=="B"){return(0)}
   if(current.in=="C"){return(0)}
-#  if(current.in=="D"){return(0.0015)}
   if(current.in=="D"){return(0)}
   if(current.in=="E"){return(0)}
+  if(current.in=="F"){return(0)}
+  if(current.in=="G"){return(0)}
+  if(current.in=="H"){return(0.0015)}
+  if(current.in=="I"){return(0)}
 }
 #  t_clust_fct <- function(x){rnorm(x,mean = 3,sd=1)}
 
 n_contact_fct = function(t, current.in, host.count){
     
-  if(current.in=="A") {p=abs(round(rnorm(1, 20, 1), 0))}
+  if(current.in=="A") {p=abs(round(rnorm(1, 16, 1), 0))}
   if(current.in=="B") {p=abs(round(rnorm(1, 4, 1), 0))}
   if(current.in=="C") {p=abs(round(rnorm(1, 4, 1), 0))}
-  if(current.in=="D") {p=abs(round(rnorm(1, 8, 1), 0))}
+  if(current.in=="D") {p=abs(round(rnorm(1, 6, 1), 0))}
   if(current.in=="E") {p=abs(round(rnorm(1, 4, 1), 0))}
-  
-#  if(current.in=="C"){p=4*10*exp(0.0005*host.count)/((10-4)+4*exp(0.0005*host.count))}
-
+  if(current.in=="F") {p=abs(round(2*10*exp(0.0005*host.count)/((10-2)+2*exp(0.0005*host.count))))}
+  if(current.in=="G") {p=abs(round(6*10*exp(-0.05*host.count)/((10-6)+6*exp(-0.05*host.count))))}
+  if(current.in=="H") {p=abs(round(rnorm(1, 4, 1), 0))}
+  if(current.in=="I") {p=abs(round(rnorm(1, 4, 1), 0))}
   return(p)
 }
 
@@ -106,10 +112,14 @@ n_contact_fct = function(t, current.in, host.count){
 p_Trans_fct <- function(t, current.in, host.count, t_incub){
   if(t < t_incub){p=0}
   if(t >= t_incub & current.in=="A"){p=0.015}
-  if(t >= t_incub & current.in=="B"){p=0.125}
-  if(t >= t_incub & current.in=="C"){p=0.175}
-  if(t >= t_incub & current.in=="D"){p=0.0875}
-  if(t >= t_incub & current.in=="E"){p=0.275}
+  if(t >= t_incub & current.in=="B"){p=0.1}
+  if(t >= t_incub & current.in=="C"){p=0.15}
+  if(t >= t_incub & current.in=="D"){p=0.1}
+  if(t >= t_incub & current.in=="E"){p=0.2}
+  if(t >= t_incub & current.in=="F"){p=0.15}
+  if(t >= t_incub & current.in=="G"){p=0.15}
+  if(t >= t_incub & current.in=="H"){p=0.15}
+  if(t >= t_incub & current.in=="I"){p=0.15}
   return(p)
 }
 
@@ -118,7 +128,7 @@ t_incub_fct <- function(x){rnorm(x,mean = 5,sd=2)} #Approximately 4.2 days
 
 # Starting the simulation ------------------------------------
 
-#set.seed(101)
+#set.seed(111)
 
 SimulationSingle <- nosoiSim(type="single", # Number of hosts
                              popStructure="discrete", #discrete or continuous
@@ -169,7 +179,7 @@ cum.p <- ggplot(data=cumulative.table, aes(x=t, y=Count)) + geom_line() + theme_
 cum.p.c <- ggplot(data=dynamics.table, aes(x=t, y=Count, color=state)) + geom_line() + theme_minimal() + 
   labs(x="Time (t)",y="Number of active infected hosts") + scale_y_log10()
 
-#ggpubr::ggarrange(cum.p, cum.p.c, widths = 2, heights = 1, legend="right")
+ggpubr::ggarrange(cum.p, cum.p.c, widths = 2, heights = 1, legend="right")
 #ggsave("cov_network_cuminf_max10000.png", plot=last_plot())
 
 
@@ -182,23 +192,25 @@ save.tree <- function(){
   #                                            legend.key = element_blank()) 
   #set.seed(5905950) 
   
-  get_sample <- function(SimulationSingle) {
+  getSample <- function(SimulationSingle) {
     table.hosts <- getTableHosts(SimulationSingle, pop="A")
     sampled.hosts <- sample(table.hosts$hosts.ID, round(2.5*last(cum.p$data$t)), replace=F)
     int.nodes <- sample((Ntip(sim.tree@phylo)+2):(Ntip(sim.tree@phylo)+sim.tree@phylo$Nnode)) #randomize order of internal nodes
-    tcs.list <- rep(list(NULL),3)
-    ## move along internal nodes and stop when you have three clades with 10-20 individuals.
+    tcs.list <- rep(list(NULL),2)
+    ## move along internal nodes and stop when you have two clades with 10-20 individuals.
     s <- round(rnorm(10,15,3))
     for (i in seq_along(tcs.list)){
       while(is.null(tcs.list[[i]])){
         true.cluster <- extract.clade(sim.tree@phylo, sample(int.nodes, 1))
         true.cluster <- subset(sim.tree@data, sim.tree@data$host %in% true.cluster$tip.label)
-        if(length(true.cluster$host) %in% s &
+#          merge(., as_tibble(sim.tree@phylo), by="node")
+        if(length(unique(true.cluster$host)) %in% s &
            length(grep("A", true.cluster$state)) >= 0.95*length(true.cluster$state)) {
            tcs.list[[i]] <- true.cluster
         }
       }
     }
+    
     ## Add these individuals to list of randomly sampled invididuals
     sampled.hosts <- unique(c(sampled.hosts, unname(unlist(lapply(tcs.list, "[", 'host')))))
     ## Extract tree for list of individuals from the full simulation tree
@@ -207,19 +219,20 @@ save.tree <- function(){
     return(sampled.tree)
   }
   
-  sampled.tree <- get_sample(SimulationSingle)
+  sampled.tree <- getSample(SimulationSingle)
   
   ## Save sampled trees as RDS for generation of ctl file for indelible
   #saveRDS(file="sampled_trees.rds", sampled.trees)
   
   sampled.tree <- as_tibble(sampled.tree)
-  # dirtrans_clusters <- mclapply(tcs.list, function(x) {
-  #   subset(sampled.tree, sampled.tree$label %in% x$host)}, 
-  #   mc.cores=numCores)
+  dirtrans_clusters <- mclapply(tcs.list, function(x) {
+    subset(sampled.tree, sampled.tree$label %in% x$host)},
+    mc.cores=numCores)
+  saveRDS(dirtrans_clusters, paste0("dirtrans_clusters_", sim_index, ".rds"))
   
-  for (i in seq_along(tcs.list)) {
-    tcs.list[[i]]$host <- paste(tcs.list[[i]]$host, tcs.list[[i]]$state, sep="_") }
+
   
+
   sampled.tree$label <- paste(sampled.tree$label, sampled.tree$state,sep="_")
   sampled.tree <- as.treedata(sampled.tree)
   
@@ -232,9 +245,8 @@ save.tree <- function(){
                          lower = quantile(sum_sim$R0$R0.dist, 0.05)), 
               paste0("R0_", sim_index, ".tab"), sep='\t', quote=F, row.names = F)
   
-  saveRDS(tcs.list, paste0("dirtrans_clusters_", sim_index, ".rds"))
   
-  text <- write.tree(sampled.trees@phylo)
+  text <- write.tree(sampled.tree@phylo)
   strip.nodelabels<-function(text){
     obj<-strsplit(text,"")[[1]]
     cp<-grep(")",obj)
@@ -262,13 +274,13 @@ save.tree <- function(){
 max.t <- max(dynamics.table$t)
 if(isTRUE(all(dynamics.table$Count[dynamics.table$state == 'A' & 
                                    dynamics.table$t == max.t] > 
-              dynamics.table$Count[dynamics.table$state %in% c('B', 'C', 'D', 'E') & 
+              dynamics.table$Count[dynamics.table$state %in% c('B', 'C', 'D', 'E', 'F', 'G', 'H', 'I') & 
                                    dynamics.table$t == max.t]))) {
   save.tree()
 } else {NULL}
 ## End ###################################################################################
 
-require(phyclust)
+#require(phyclust)
 
 
 ## Network ##############
