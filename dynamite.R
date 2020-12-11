@@ -32,12 +32,16 @@ option_list = list(
   make_option(c("-m", "--metadata"), type="character", default=list.files(pattern="*.tab")[[1]], 
               help="metadata file name [default= .tab extension]", metavar="character"),
   make_option(c("-s", "--seqLen"), type="numeric", default=30000, 
-              help="sequence length [default= 30000]", metavar="numeric"),
-  make_option(c("-a", "--cluster"), type="character", default="c", 
+              help="sequence length [default= 10000]", metavar="numeric"),
+  make_option(c("-c", "--cluster"), type="character", default="c", 
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= phylopart]", metavar="character"),
+  make_option(c("-l", "--leaves"), type="character", default="", 
+              help="choice of transformation to tree from bifurcating or addLeaves [default=empty]", metavar="character"),
+  make_option(c("-t", "--threshold"), type="numeric", default=0.05, 
+              help="branch length threshold [default= 0.05]", metavar="numeric"),
   make_option(c("-asr", "--asr"), type="character", default="N", 
-              help="option of ancestral state reconstruction for each cluster [default= N]", metavar="character"),
-); 
+              help="option of ancestral state reconstruction for each cluster [default= N]", metavar="character")
+ ); 
 
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -245,6 +249,7 @@ define.clades(sub_tree)
 
 ## Functions used in DYNAMITE cluster-picking algorithm ############################################################################
 branchLengthLimit <- function(tree) {
+  p.dist.mat.leaves <- cophenetic(tree)
   get.node.leaf.MPPD <- function(node,tree,distmat){
     nlist <- tips(tree,node)
     foo <- distmat[nlist,nlist]
@@ -256,113 +261,63 @@ branchLengthLimit <- function(tree) {
     foo <- distmat[elist,elist]
     return(median(foo[upper.tri(foo,diag=FALSE)]))
   } ## Given a node, tree, and distance matrix, return median pairwise patristic distance (MPPD) of all of its decendants
-  pdist.clusttree <- function(tree,distmat=NULL,mode=c('leaf', 'all')){
+  pdist.clusttree <- function(tree,distmat, mode=c('leaf', 'all')){
     mode <- match.arg(mode)
-    if(is.null(distmat)){
-      if(mode=='leaf'){ distmat <-  p.dist.mat.leaves}
-      else{ distmat <-  dist.nodes(tree) }
-    }
     ntips<- Ntip(tree)
     nint <- tree$Nnode # Number of internal nodes
-    if(Ntip(tree) < 5000){
-      node_num <- (ntips+2):(ntips+nint)
-    } else {
-      node_num <- sample((ntips+1):(ntips+nint), 5000)
-    }
+    node_num <- (ntips+2):(ntips+nint)
+    
     if(mode=='leaf'){
+      distmat <-  p.dist.mat.leaves
       MPPD <- sapply(node_num,get.node.leaf.MPPD,tree,distmat)
       return(data.frame(node_num=node_num, MPPD=MPPD))
     }
     else{
+      distmat <-  dist.nodes(tree)
       MPPD <- sapply(node_num,get.node.full.MPPD,tree,distmat)
       return(data.frame(node_num=node_num, MPPD=MPPD))
     }
   } ## Given a tree and (optionally) a distance matrix, return a vector giving the median pairwise patristic distance of the subtree under each internal node
-  pdist.clades <- function(clades, tree, distmat=NULL, mode=c('leaf', 'all')){
+  pdist.clades <- function(clades, tree, distmat, mode=c('leaf', 'all')){
     mode <- match.arg(mode)
-    if(is.null(distmat)){
-      if(mode=='leaf'){ distmat <-  p.dist.mat.leaves}
-      else{ distmat <-  dist.nodes(tree) }
-    }
+    
     if(mode=='leaf'){
+      distmat <-  p.dist.mat.leaves
       mclapply(clades, function(x) {
         get.node.leaf.MPPD(x$from[1], tree, distmat)
       }, mc.cores=numCores)
     } else{
+      distmat <-  dist.nodes(tree)
       mclapply(clades, function(x) {
         get.node.full.MPPD(x$from[1], tree, distmat)
       }, mc.cores=numCores)
     }
   } ## Determine MPPD for all well-supported clades
-  
-  merge.nested.clust <- function(clusters) {
-    copy <- clusters
-    result <- list()
-    unwanted <- list()
-    for (ct in seq_along(clusters)) {
-      for (cc in seq_along(copy)) {
-        if (isTRUE(all(clusters[[ct]]$label %in% copy[[cc]]$label) &
-                   length(clusters[[ct]]$label) != length(copy[[cc]]$label))) {
-          unwanted[[ct]] <- clusters[[ct]]
-        } else{NULL}
-      } # End loop along copy
-    } # End loop along true
-    result <- setdiff(clusters, unwanted)
-    for (j in seq_along(result)) {
-      names(result)[[j]] <- paste0("c", j)
-    }
-    return(result)
-  }  
-  merge.overlap.clust <- function(clusters) {
-    copy <- clusters
-    unwanted <- list()
-    result <- list()
-    for (ct in seq_along(clusters)) {
-      for (cc in seq_along(copy)) {
-        if (isTRUE(sum(copy[[cc]]$label %in% clusters[[ct]]$label) > 0.05*length(copy[[cc]]$label)) &
-            isTRUE(names(copy)[[cc]] != names(clusters)[[ct]])) {
-          unwanted[[cc]] <- copy[[cc]]
-          clusters[[ct]] <- full_join(copy[[cc]], clusters[[ct]], by=c("from", "to", "branch.length", "label"))
-        } else{clusters[[ct]] <- clusters[[ct]]}
-      } # End loop along copy
-    } # End loop along true
-    result <- setdiff(clusters, Filter(Negate(function(x) is.null(unlist(x))), unwanted)) %>%
-      mclapply(., function(x){
-        dplyr::select(x, from, to, branch.length, label) %>%
-          dplyr::arrange(from,to) 
-      }, mc.cores=numCores) %>%
-      unique()
-    
-    return(result)
-  }  # In case you want to remove this and consider only fully nested clusters
   ### Create matrix of each pairwise patristic distance for external leaves using the following
-  leaves <- sample(tree$tip.label, 0.50*length(tree$tip.label))
-  leaves <- expand.grid(leaves,leaves)
-  p.dist.leaves <- sapply(seq_len(nrow(leaves)), ## Create list of all pairwise combinations of IDs using expand.grid()
-                          function(k) { #future_sapply actually slower here!
-                            i <- leaves[k,1]
-                            j <- leaves[k,2]
-                            fastDist(tree, i,j)
-                          })
-  p.dist.mat.leaves <- matrix(p.dist.leaves,
-                              nrow=Ntip(tree), ncol=Ntip(tree),
-                              dimnames=list(tree$tip.label,tree$tip.label))
+  # leaves <- expand.grid(tree$tip.label,tree$tip.label)
+  # p.dist.leaves <- sapply(seq_len(nrow(leaves)), ## Create list of all pairwise combinations of IDs using expand.grid()
+  #                         function(k) { #future_sapply actually slower here!
+  #                           i <- leaves[k,1]
+  #                           j <- leaves[k,2]
+  #                           fastDist(tree, i,j)
+  #                         })
+  # p.dist.mat.leaves <- matrix(p.dist.leaves,
+  #                             nrow=Ntip(tree), ncol=Ntip(tree),
+  #                             dimnames=list(leaves,leaves))
   
   
   ## Create a vector of MPPDs for plotting and determining branch length limit
-  distvec <- pdist.clusttree(tree, mode='all')
+  distvec <- pdist.clusttree(tree, mode='leaf')
   hist(distvec$MPPD)
   
   ## Determine MPPDs for all well-supported clades
-  clade_MPPD <- pdist.clades(clades, tree, mode='all')
+  clade_MPPD <- pdist.clades(clades, tree, mode='leaf')
   assign("clade_MPPD", clade_MPPD, envir=globalenv())
   
-  
-  phylopart.threshold <- opt$threshold
-  branch_length_limit <- quantile(distvec$MPPD, phylopart.threshold)
+  branch_length_limit <- quantile(distvec$MPPD, opt$threshold)
   return(branch_length_limit)
 }
-branchWise <- function(tree, branch_length_limit) {
+branchWise <- function(tree, branch_length_limit, make_tree) {
   #   findThreshold <- function(tree) {
   #     sub_tree <- as.phylo(tree)
   #     
@@ -481,7 +436,7 @@ branchWise <- function(tree, branch_length_limit) {
   bifurcate <- function(tree, clusters) {
     results <- list()# Copy clusters list for ease
     for (c in seq_along(clusters)) {
-      results[[c]] <- extract.clade(sub_tree, clusters[[c]]$from[1])
+      results[[c]] <- extract.clade(tree, clusters[[c]]$from[1])
       results[[c]] <- drop.tip(results[[c]], subset(results[[c]]$tip.label, results[[c]]$tip.label %notin% clusters[[c]]$label),
                                trim.internal = FALSE,
                                collapse.singles = TRUE)
@@ -529,17 +484,29 @@ branchWise <- function(tree, branch_length_limit) {
     compact() %>%
     merge.nested.clust() %>%
     merge.overlap.clust() %>%
-    merge.nested.clust() %>% ## Why am I having to run this again????
-    list.filter(length(label) >= 5)
-  #list.filter(sum(label %in% sub_tree$tip.label) >= 5)
+    merge.nested.clust()
   ## Remove singleton nodes (non-bifurcating branches) by using bifurcate() function or extracting entire clade.
-  #clusters <- bifurcate(sub_tree, clusters)
-  #clusters <- pullClade(sub_tree, clusters)
-  clusters <- addLeaves(tree, clusters)
+  
+  if (make_tree=="bifurcate") {
+    clusters <- list.filter(clusters, length(label) >= 4)
+    clusters <- bifurcate(tree, clusters)
+    clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
+  } else {
+    if (make_tree=="pullClade") {
+      clusters <- pullClade(tree, clusters)
+    } else {
+      if (make_tree=="addLeaves") {
+        clusters <- addLeaves(tree, clusters)
+        clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
+      }
+    }
+  }
+  
+  clusters <-  list.filter(clusters, sum(label %in% tree$tip.label) >= 5)
   
   return(clusters)
 }
-phylopart <- function(tree) {
+phylopart <- function(tree, branch_length_limit) {
   
   
   clusters <- list()
@@ -556,13 +523,14 @@ phylopart <- function(tree) {
   return(clusters)
 }
 
+
 write("Picking clusters based on user choice of algorithm....")
 branch_length_limit <- branchLengthLimit(sub_tree)
 if (opt$cluster == "b") {
   clusters <- branchWise(sub_tree, branch_length_limit)
 } else {
   if (opt$cluster == "c") {
-    clusters <- phylopart(sub_tree) 
+    clusters <- phylopart(sub_tree, branch_length_limit) 
     clusters <- mclapply(clusters, function(x) dplyr::rename(x, parent=from, node=to), mc.cores=numCores)
   } else {
     write("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")
