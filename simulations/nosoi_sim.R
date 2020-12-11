@@ -22,11 +22,11 @@ lapply(gsub(".+\\/(.+)", "\\1", github_packages), require, character.only=TRUE)
 ### Set seeds #############################################################################
 # get simulation parameters
 
-#args = commandArgs(trailingOnly=TRUE)
+args = commandArgs(trailingOnly=TRUE)
 sim_index = as.numeric(args[1]) # arg 1 fraction new
+#sim_index="test"
 seeds = readLines('seeds.txt')
 set.seed(seeds[sim_index])
-#sim_index="test"
 numCores = detectCores()
 
 
@@ -155,12 +155,6 @@ SimulationSingle <- nosoiSim(type="single", # Number of hosts
                              timeDep.nContact=FALSE,
                              diff.nContact=TRUE,
                              
-                             # nContact=time_contact,
-                             # hostCount.nContact=TRUE,
-                             # param.nContact = NA,
-                             # timeDep.nContact=FALSE,
-                             # diff.nContact=TRUE,
-                             
                              pTrans = p_Trans_fct,
                              hostCount.pTrans=TRUE,
                              param.pTrans = list(t_incub=t_incub_fct),
@@ -174,13 +168,14 @@ SimulationSingle <- nosoiSim(type="single", # Number of hosts
 sum_sim <- summary(SimulationSingle)
 cumulative.table <- getCumulative(SimulationSingle)
 dynamics.table <- getDynamic(SimulationSingle)
-cum.p <- ggplot(data=cumulative.table, aes(x=t, y=Count)) + geom_line() + theme_minimal() + 
+cum.p <- ggplot(data=cumulative.table, aes(x=t, y=Count)) + geom_line() + theme_minimal() +
   labs(x="Time (t)",y="Cumulative count of infected hosts") + scale_y_log10()
-cum.p.c <- ggplot(data=dynamics.table, aes(x=t, y=Count, color=state)) + geom_line() + theme_minimal() + 
+cum.p.c <- ggplot(data=dynamics.table, aes(x=t, y=Count, color=state)) + geom_line() + theme_minimal() +
   labs(x="Time (t)",y="Number of active infected hosts") + scale_y_log10()
 
-ggpubr::ggarrange(cum.p, cum.p.c, widths = 2, heights = 1, legend="right")
-#ggsave("cov_network_cuminf_max10000.png", plot=last_plot())
+
+# ggpubr::ggarrange(cum.p, cum.p.c, widths = 2, heights = 1, legend="right")
+# ggsave("simtest_max10000.png", plot=last_plot())
 
 
 ## Grab tree #########################################################################################
