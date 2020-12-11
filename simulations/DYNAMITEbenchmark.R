@@ -5,7 +5,7 @@ rm(list=ls())
 
 
 # List of packages for session
-.packages <-  c("optparse", "treeio", "phytools", "remotes", "dplyr", "plyr", "tidyr", "tidytree", "data.table", 
+.packages <-  c("optparse", "remotes", "phytools", "treeio", "dplyr", "plyr", "tidyr", "tidytree", "data.table", 
                 "parallel", "stringr", "rlist", "paleotree", "phylodyn",
                 "ggtree", "drc", "growthrates", "TreeTools", "geiger") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
 .github_packages <- c("emillykkejensen/familyR", "mrc-ide/skygrowth") 
@@ -27,10 +27,10 @@ option_list = list(
   make_option(c("-s", "--sim_index"), type="numeric", default=as.character("test")),
   make_option(c("-a", "--cluster"), type="character", default="b", 
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= phylopart]", metavar="character"),
-  make_option(c("-l", "--algorithm"), type="character", default="", 
+  make_option(c("-l", "--leaves"), type="character", default="", 
               help="choice of transformation to tree from bifurcating or addLeaves [default=empty]", metavar="character"),
   make_option(c("-t", "--threshold"), type="numeric", default=0.05, 
-              help="Phylopart threshold [default= 0.05]", metavar="numeric")
+              help="branch length threshold [default= 0.05]", metavar="numeric")
 ); 
 
 opt_parser = OptionParser(option_list=option_list);
@@ -1023,7 +1023,7 @@ states_present <- data.frame(sim=opt$sim_index, state = do.call("rbind", states_
 write("Picking clusters based on user choice of algorithm....")
 branch_length_limit <- branchLengthLimit(sub_tree)
 if (opt$cluster == "b") {
-  clusters <- branchWise(sub_tree, branch_length_limit, make_tree=opt$algorithm)
+  clusters <- branchWise(sub_tree, branch_length_limit, make_tree=opt$leaves)
 } else {
   if (opt$cluster == "c") {
     clusters <- phylopart(sub_tree)
@@ -1184,14 +1184,14 @@ for (i in growth_criteria$state) {
 
 
 ## Save performance metrics for each run ################################################################
-if (opt$algorithm == "") {
+if (opt$leaves == "") {
   setwd(paste0("/blue/salemi/brittany.rife/dynamite/simulations/", 
                opt$cluster, "/perc_",
                opt$threshold))
 } else {
   setwd(paste0("/blue/salemi/brittany.rife/dynamite/simulations/", 
              opt$cluster, "/", 
-             opt$algorithm, "/perc_",
+             opt$leaves, "/perc_",
              opt$threshold))
 }
 

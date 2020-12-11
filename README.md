@@ -8,6 +8,7 @@ R 3.6.0 or higher
 
 **Libraries**
 
+* optparse
 * remotes
 * phytools
 * data.tree
@@ -26,34 +27,40 @@ R 3.6.0 or higher
 
 DYNAMITE requires a tree (scaled in substitutions/site) in newick or nexus format with support values at the nodes. Support values can be provided by any (single) method - i.e., combined result of 2 or more methods will not be accepted. These values can be scaled from 0-1 or 0-100.
 
-Additionally, a metadata file with sampling dates and traits of interest is required. Column headers are needed. The first column must correspond to the taxa names, the second column dates (must be consistently either numeric or Date format), and remainig columns any number of traits of interest. Specific header names are not required, as only the order is called.
-
+Additionally, a metadata file with sampling dates and traits of interest is required. Column headers are needed. The first column must be named "id" and correspond to the taxa names, the second column must be named "date" and correspond to date information (must be consistently either numeric or Date format). Remaining columns can consist of any number of traits of interest. Specific header names are not required, as only the order is called.
 
 ## Execution 
 
 ```R
-arg1 <- path_to_tree_file
-arg2 <- path_to_metadata_file
-arg3 <- sequence_length
-system(paste("dynamite.R", arg1, arg2, arg3))
+--help (-h) = provides helpful information for running DYNAMITE
+--tree (-t) = path to treefile [default= .nwk file]
+--metadata (-m) = path to metadata file [default= .tab file]
+--seqLen (-s)  = sequence length [default=10000]
+--cluster (-c) = choice of cluster algorithm from 'c' (Phylopart's cladewise) or 'b' (DYNAMITE's branchwise) [default= b]
+--leaves (-l) = choice of transformation of phylogenetic cluster nodes to phylo format through forced bifurcation ("bifurcate"), addition of leaves ("addLeaves"), or extraction of the entire associated clade ("pullClade"). This option is only used for the branchwise cluster-picking algorithm so default is empty ([default= ""]
+--threshold (-t) = branch length threshold [default=0.05]
+--asr (-asr) = option of ancestral state reconstruction for each cluster [default= N]
 ```
 
 **Important functions (with defaults):**
 
 ```R
-lsd2(estimateRoot="as", constraint=TRUE, variance=1, ZscoreOutlier = 3, seqLen = arg3, nullblen=-1)
+Rlsd2::lsd2(estimateRoot="as", constraint=TRUE, variance=1, ZscoreOutlier = 3, seqLen = arg3, nullblen=-1)
   
-phylopart(phylopart.threshold=0.10)
+branch_length_limit(opt$threshold=0.05)
 
-ancStateRecon(ace(model="ER", type="discrete"))
+branchwise()
 
-calculateNe(skygrowth.map(res = 10, tau0 = 0.1))
+phylopart()
+
+ape::ltt()
 
 calculateRe(conf.level=0.95, s=100, psi=rnorm(s, 14, 5))
 
-yule()
+ape::yule()
 
-ltt()                 
+ancStateRecon(ace(model="ER", type="discrete"))
+                 
 ```
 
 ## Output
@@ -62,7 +69,16 @@ DYNAMITE will result in the following output:
 
 
 ### Data Table
-"result_data.rds" file containing metadata distributions over time, tree statistics (e.g., Pybus's gamma), and relevant values (e.g., R0 and TMRCA) for each identified cluster. This file can be opened with \url{need info from NANA analytics} for interactive viewing.
+
+"result_data.rds" file containing the following information for each cluster:
+
+*	metadata distributions over time
+*	lineages through time for each cluster *relative to that of the total population*
+*	priority metric calculated from fraction of time spent in growth phase * growth rate
+*	tree statistics (e.g., Pybus's gamma, yule)
+*	relevant values (e.g., R0, TMRCA, timespan)
+
+This file can be opened with \url{need info from NANA analytics} for interactive viewing.
 
  
 ### Tree
@@ -70,6 +86,8 @@ DYNAMITE will result in the following output:
 
 
 ## References
+Prosperi MCF (2011). A novel methodology for large-scale phylogeny partition. Nat Commun. 2: 321.
+
 Paradis E, Claude J & Strimmer K (2004). APE: analyses of phylogenetics and evolution in R language. Bioinformatics 20: 289-290.
 
 Yu G, Smith D, Zhu H, Guan Y, Lam TT (2017). ggtree: an R package for visualization and annotation of phylogenetic trees with their covariates and other associated data. Methods Ecol. Evol. 8:28-36.
