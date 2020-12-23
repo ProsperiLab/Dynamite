@@ -89,14 +89,6 @@ checkFortree <- function(tree_file) {
 sub_tree <- checkFortree(opt$tree)
 
 ## Need to force binary tree and to replace zero branch lengths with full bootstrap support
-if (isFALSE(is.binary(sub_tree))) {
-  sub_tree <- multi2di(sub_tree)
-  
-  sub_tree$node.label[sub_tree$node.label==""] <- "100"
-} else {
-  sub_tree <- sub_tree
-}
-
 
 
 message("Searching for metadata file...")
@@ -186,7 +178,6 @@ findMRSD <- function(time_tree) {
 } # End findMRSD function
 findMRSD(time_tree)
 
-
 # Find all well-supported clades
 write("Defining well-supported clades within the tree using node labels...")
 define.clades <- function(sub_tree) {
@@ -236,12 +227,6 @@ define.clades <- function(sub_tree) {
 } # End defineClades function
 define.clades(sub_tree)
 
-
-# We can now use a coalescent model, which considers the genealogical process of our sample of taxa taken from an assumed large population that changes in time deterministically. The population size is assumed to be homogeneous and under neutral evolution; although in practice these assumptions are violated, the ‘effective population size’, Ne, can often still be derived, which gives the same coalescence rate as an idealized population of size N. During exponential growth, there is a linear relationship between the prevalence and the incidence, and hence the coalescence rate is directly proportional to the number of infected individuals (Frost and Volz, 2010). Assuming our sampled sequences exhibit the behavior described above, we will use a non-parametric coalescent model to estimate Ne and a polynomial model fit to the Ne to determine the time window during which the exponential growth phase exists. 
-
-# Since genealogies representative of exponentially increasing populations often provide very little information about effective population size near the present (or most recent sample) (de Silva et al. 2012), original "skyline" (Pybus et al., 2000; Strimmer and Pybus, 2001) estimators with Brownian motion priors (Minin et al. 2008; Palacios and Minin 2013) on Ne may produce estimates which stabilize at a constant level even when the true size is increasing or decreasing exponentially. Volz and Didelot's "skygrowth" model offers a more realistic prior that is defined in terms of the growth rate of Ne. 
-
-# Following Ne estimation using skygrowth and definition of the exponential growth period, the median branch length (scaled in substitutions/site) during this period of time can be used as the cutoff to determine the incorporation of internal and external nodes into a "transmission cluster" throughout the remainder of the tree. The reasoning behind this is that, during this time, the internal nodes have a higher probability of being considered individuals involved in direct transmission than the remainder of the tree and enable us to define the median branch length as the median genetic distance separating direct transmission events. 
 
 # Using a pre-order (root-to-tip) tree traversal, for each node, find subtrees/clades (>=3 nodes) for which cumulative mean branch, or edge, length is within the branch length limit at that level within the tree using the "branch-wise" algorithm, or "b". Note this should only be used with epidemics that are past the exponential phase of growth.
 
@@ -540,6 +525,8 @@ if (opt$cluster == "b") {
 
 #Employ ancestral state reconstruction of traits (optional)
 
+## May need to force bifurcation here before ASR!!!!!!!1
+
 ancStateRecon <- function(tree, metadata) {
 ## The element lik.anc gives us the marginal ancestral states, also known as the 'empirical Bayesian posterior probabilities.'
 write("Estimating likelihood of ancestral states...", stderr())
@@ -578,19 +565,6 @@ names(fitER) <- colnames(metadata[,3:ncol(metadata)])
 # names(Q) <- colnames(traits[-1])
 
 
-## Now need to figure out if node numbers match in lik.anc with those of sub_tree
-# library(RColorBrewer)
-# #display.brewer.all(colorblindFriendly = TRUE)
-# cols<-brewer.pal(length(unique(traits[,1])), "Set2")
-# 
-# plotTree(sub_tree,lwd=1)
-# nodelabels(node=1:sub_tree$Nnode+Ntip(sub_tree),
-#            pie=fitER[[1]]$lik.anc,piecol=cols,cex=0.4)
-# add.simmap.legend(colors=cols,prompt=FALSE,x=0.9*par()$usr[1],
-#     y=0.8*par()$usr[3],fsize=0.8)
-
-### Still not sure yet, so need to make sure in the end...
-#write("Manipulating data for easy output...", stderr())
 anc.states <- fitER
 for (i in 1:length(fitER)) {
   anc.states[[i]] <- as.data.frame(fitER[[i]]$lik.anc)
@@ -740,7 +714,8 @@ calculateNe <- function(cluster) {
   #b0 <- BNPR(x)
   #plot_BNPR( b0 )
   #p <- data.frame(time=rev(b0$x), Ne=b0$effpopmean)
-  fit <- tryCatch(skygrowth.map(x, res=10), error=function(e) NULL)
+    res=round(max(nodeHeights(x))/7)
+    fit <- tryCatch(skygrowth.map(x, res=res), error=function(e) NULL)
   gr <- growth.plot(fit)
   p <- data.frame(time=fit$time, nemed=fit$ne)
   return(p)
