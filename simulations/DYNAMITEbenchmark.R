@@ -3,7 +3,7 @@
 rm(list=ls())
 
 
-
+ptm <- proc.time()
 # List of packages for session
 .packages <-  c("optparse", "remotes", "phytools", "treeio", "dplyr",  
                 "plyr", "tidyr", "tidytree", "data.table",
@@ -25,12 +25,12 @@ lapply(gsub(".+\\/(.+)", "\\1", .github_packages), require, character.only=TRUE)
 numCores <- detectCores()
 
 option_list = list(
-  make_option(c("-s", "--sim_index"), type="numeric", default=666),
+  make_option(c("-s", "--sim_index"), type="numeric", default=2),
   make_option(c("-a", "--cluster"), type="character", default="b", 
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= phylopart]", metavar="character"),
-  make_option(c("-l", "--leaves"), type="character", default="", 
+  make_option(c("-l", "--leaves"), type="character", default="addLeaves", 
               help="choice of transformation to tree from bifurcating or addLeaves [default=empty]", metavar="character"),
-  make_option(c("-t", "--threshold"), type="numeric", default=0.075, 
+  make_option(c("-t", "--threshold"), type="numeric", default=0.10, 
               help="branch length threshold [default= 0.05]", metavar="numeric")
 ); 
 
@@ -55,7 +55,7 @@ true.cluster.dyn <- function(conf.level=0.95){
                                  dynamic = rbind('background', 'static', 'static', 'static', 'static', 'growth', 'decay', 'static', 'static'),
                                  birth = rbind(NA,NA,NA,NA,NA,NA,NA,NA, 'birth')
                                  #death = rbind(NA,NA,NA,NA,NA), stringsAsFactors = F
-                                 )
+  )
   
   ## Estimate R0 for each cluster based on paramaters used in simulation
   s <- 100 # sample size of 100
@@ -65,14 +65,14 @@ true.cluster.dyn <- function(conf.level=0.95){
   n_contacts_EHI <- rnorm(s, 4, 1)
   n_contacts_F <- as.numeric(2)
   n_contacts_G <- as.numeric(6)
- 
+  
   t_incub <- rnorm(s, 5, 2)
   t_exit <- rnorm(s, 14, 2)
   p_trans_A <- 0.015
   p_trans_BD <- 0.1
   p_trans_CFGHI <- 0.15
   p_trans_E <- 0.2
-
+  
   
   Z=qnorm(0.5*(1 + conf.level))
   
@@ -81,11 +81,11 @@ true.cluster.dyn <- function(conf.level=0.95){
   R0_B = sample(n_contacts_BC*p_trans_BD*(t_exit-t_incub),
                 size=s, replace=F)
   R0_C = sample(n_contacts_BC*p_trans_CFGHI*(t_exit-t_incub),
-                  size=s, replace=F)
+                size=s, replace=F)
   R0_D = sample(n_contacts_D*p_trans_BD*(t_exit-t_incub),
                 size=s, replace=F)
   R0_E = sample(n_contacts_EHI*p_trans_E*(t_exit-t_incub),
-                 size=s, replace=F)
+                size=s, replace=F)
   R0_F = sample(n_contacts_F*p_trans_CFGHI*(t_exit-t_incub),
                 size=s, replace=F)
   R0_G = sample(n_contacts_G*p_trans_CFGHI*(t_exit-t_incub),
@@ -151,7 +151,7 @@ true.cluster.dyn <- function(conf.level=0.95){
   cluster_dynamics$mean_R0[4] = mean(R0_D)
   cluster_dynamics$upper_R0[4] = upper_D
   cluster_dynamics$lower_R0[4] = lower_D
-
+  
   cluster_dynamics$mean_R0[5] = mean(R0_E)
   cluster_dynamics$upper_R0[5] = upper_E
   cluster_dynamics$lower_R0[5] = lower_E
@@ -218,18 +218,18 @@ define.clades <- function(sub_tree) {
 } # End defineClades function
 add.test.clust <- function() {
   dirtrans_clusters <- readRDS(file=paste0("dirtrans_clusters_", opt$sim_index, ".rds"))
-#  n <- length(true_clusters) # Can be replaced with below since all true clusters now (but if switching back remember to change i to n+i below)
+  #  n <- length(true_clusters) # Can be replaced with below since all true clusters now (but if switching back remember to change i to n+i below)
   true_clusters <- list()
   state <- list()
   for (i in seq_along(dirtrans_clusters)){
-  state[[i]] <- dirtrans_clusters[[i]]$state[1]
-  true_clusters[[i]] <- data.frame(cluster_id = paste0(state[[i]], "_direct"), # This will be some arbitrary name you assign to the cluster, such as C1, C2, C3, etc.
-                                   taxa = str_replace_all(toString(unique(dirtrans_clusters[[i]]$label)), fixed(" "), ""), # list of taxa 
-                                   mean_R0 = cluster_dynamics$mean_R0[cluster_dynamics$state == state[[i]]],
-                                   upper_R0 = cluster_dynamics$upper_R0[cluster_dynamics$state == state[[i]]],
-                                   lower_R0 = cluster_dynamics$lower_R0[cluster_dynamics$state == state[[i]]])
-                                   #dynamic = cluster_dynamics$dynamic[cluster_dynamics$state == state[[i]]],
-                                   #birth = cluster_dynamics$birth[cluster_dynamics$state == state[[i]]], stringsAsFactors = F) # dynamic corresponds to the dynamic state (growth, etc.) assigned to the cluster state
+    state[[i]] <- dirtrans_clusters[[i]]$state[1]
+    true_clusters[[i]] <- data.frame(cluster_id = paste0(state[[i]], "_direct"), # This will be some arbitrary name you assign to the cluster, such as C1, C2, C3, etc.
+                                     taxa = str_replace_all(toString(unique(dirtrans_clusters[[i]]$label)), fixed(" "), ""), # list of taxa 
+                                     mean_R0 = cluster_dynamics$mean_R0[cluster_dynamics$state == state[[i]]],
+                                     upper_R0 = cluster_dynamics$upper_R0[cluster_dynamics$state == state[[i]]],
+                                     lower_R0 = cluster_dynamics$lower_R0[cluster_dynamics$state == state[[i]]])
+    #dynamic = cluster_dynamics$dynamic[cluster_dynamics$state == state[[i]]],
+    #birth = cluster_dynamics$birth[cluster_dynamics$state == state[[i]]], stringsAsFactors = F) # dynamic corresponds to the dynamic state (growth, etc.) assigned to the cluster state
   }
   return(true_clusters)
 }
@@ -291,7 +291,7 @@ branchLengthLimit <- function(tree) {
     ntips<- Ntip(tree)
     nint <- tree$Nnode # Number of internal nodes
     node_num <- (ntips+2):(ntips+nint)
- 
+    
     if(mode=='leaf'){
       distmat <-  p.dist.mat.leaves
       MPPD <- sapply(node_num,get.node.leaf.MPPD,tree,distmat)
@@ -305,7 +305,7 @@ branchLengthLimit <- function(tree) {
   } ## Given a tree and (optionally) a distance matrix, return a vector giving the median pairwise patristic distance of the subtree under each internal node
   pdist.clades <- function(clades, tree, distmat, mode=c('leaf', 'all')){
     mode <- match.arg(mode)
-   
+    
     if(mode=='leaf'){
       distmat <-  p.dist.mat.leaves
       mclapply(clades, function(x) {
@@ -343,48 +343,48 @@ branchLengthLimit <- function(tree) {
   return(branch_length_limit)
 }
 branchWise <- function(tree, branch_length_limit, make_tree) {
-#   findThreshold <- function(tree) {
-#     sub_tree <- as.phylo(tree)
-#     
-#     sub_tree <- multi2di(sub_tree)
-# #    fit <- tryCatch(skygrowth.map(sub_tree, res=round(180/7)), error=function(e) NULL)
-# #    p <- data.frame(time=fit$time, nemed=fit$ne)
-# #    fit <- fit_easylinear(p$time, p$nemed, quota=0.99) #Foound this to be the best, except when prob_exit and p_trans are both high
-# #    plot(fit)
-# #    time_epi_peak <- max(nodeHeights(sub_tree, root.edge=TRUE)) - min(fit@fit$model$x)
-#     
-#     
-#     
-#      b0 <- BNPR(multi2di(tree))
-#      plot_BNPR( b0 )
-#      p <- data.frame(time=rev(b0$summary$time), ne=b0$summary$mean)
-#      mL <- try(drm(data=p, ne~time, fct = LL.3(), type = "continuous"), silent=T)
-#      p2 <- plot(mL)
-#      
-#     # dY <- diff(p2$`1`)/diff(p2$time)  # the derivative of your function
-#     # dX <- rowMeans(embed(p2$time,2)) # centers the X values for plotting
-#     # plot(dX,dY,type="l",main="Derivative") #check
-#     # d1 <- data.frame(x=dX, y=dY)
-#     # 
-#     # time_epi_peak <- max(nodeHeights(tree, root.edge=TRUE)) - d1$x[which.max(d1$y)]
-#     
-#     fit <- fit_easylinear(p2$`time`, p2$`1`, quota=0.90) #Foound this to be the best, except when prob_exit and p_trans are both high
-#     plot(fit)
-# #    time_epi_peak <- max(nodeHeights(sub_tree, root.edge=TRUE)) - min(fit@fit$model$x)
-#     time_epi_peak <- min(fit@fit$model$x)
-#     
-#     time.tree.exp <- paleotree::timeSliceTree(sub_tree, time_epi_peak)
-#     #  bl_rescaled <- time.tree.exp$edge.length*(time_tree_data$mean.rate)
-#     bl_rescaled <- time.tree.exp$edge.length
-#     plot(density(bl_rescaled))
-#     
-#     branch_length_limit <- median(bl_rescaled) ## Ideally will need to multiply branch lengths by estimated rate.
-#     #branch_length_limit <- mean(bl_rescaled) ## Ideally will need to multiply branch lengths by estimated rate. # Sometimes median works best
-#     ## Maybe we should take both and whichever is larger?
-#     #branch_length_limit <- mean(time.tree.exp$edge.length) + qnorm(.95)*(sd(time.tree.exp$edge.length)/sqrt(Ntip(time.tree.exp)))
-#     
-#     return(branch_length_limit)
-#   } # End findThreshold()
+  #   findThreshold <- function(tree) {
+  #     sub_tree <- as.phylo(tree)
+  #     
+  #     sub_tree <- multi2di(sub_tree)
+  # #    fit <- tryCatch(skygrowth.map(sub_tree, res=round(180/7)), error=function(e) NULL)
+  # #    p <- data.frame(time=fit$time, nemed=fit$ne)
+  # #    fit <- fit_easylinear(p$time, p$nemed, quota=0.99) #Foound this to be the best, except when prob_exit and p_trans are both high
+  # #    plot(fit)
+  # #    time_epi_peak <- max(nodeHeights(sub_tree, root.edge=TRUE)) - min(fit@fit$model$x)
+  #     
+  #     
+  #     
+  #      b0 <- BNPR(multi2di(tree))
+  #      plot_BNPR( b0 )
+  #      p <- data.frame(time=rev(b0$summary$time), ne=b0$summary$mean)
+  #      mL <- try(drm(data=p, ne~time, fct = LL.3(), type = "continuous"), silent=T)
+  #      p2 <- plot(mL)
+  #      
+  #     # dY <- diff(p2$`1`)/diff(p2$time)  # the derivative of your function
+  #     # dX <- rowMeans(embed(p2$time,2)) # centers the X values for plotting
+  #     # plot(dX,dY,type="l",main="Derivative") #check
+  #     # d1 <- data.frame(x=dX, y=dY)
+  #     # 
+  #     # time_epi_peak <- max(nodeHeights(tree, root.edge=TRUE)) - d1$x[which.max(d1$y)]
+  #     
+  #     fit <- fit_easylinear(p2$`time`, p2$`1`, quota=0.90) #Foound this to be the best, except when prob_exit and p_trans are both high
+  #     plot(fit)
+  # #    time_epi_peak <- max(nodeHeights(sub_tree, root.edge=TRUE)) - min(fit@fit$model$x)
+  #     time_epi_peak <- min(fit@fit$model$x)
+  #     
+  #     time.tree.exp <- paleotree::timeSliceTree(sub_tree, time_epi_peak)
+  #     #  bl_rescaled <- time.tree.exp$edge.length*(time_tree_data$mean.rate)
+  #     bl_rescaled <- time.tree.exp$edge.length
+  #     plot(density(bl_rescaled))
+  #     
+  #     branch_length_limit <- median(bl_rescaled) ## Ideally will need to multiply branch lengths by estimated rate.
+  #     #branch_length_limit <- mean(bl_rescaled) ## Ideally will need to multiply branch lengths by estimated rate. # Sometimes median works best
+  #     ## Maybe we should take both and whichever is larger?
+  #     #branch_length_limit <- mean(time.tree.exp$edge.length) + qnorm(.95)*(sd(time.tree.exp$edge.length)/sqrt(Ntip(time.tree.exp)))
+  #     
+  #     return(branch_length_limit)
+  #   } # End findThreshold()
   pickClust <- function(clade){
     
     ## Need to add mean_bl column  to original clade list
@@ -503,7 +503,7 @@ branchWise <- function(tree, branch_length_limit, make_tree) {
     return(x)
   } # End function; this added articial leaves to create bifurcating tree, but changed to the bifurcate f(x) above, which just involes dropping tips.
   
-#  branch_length_limit <- findThreshold(sub_tree)
+  #  branch_length_limit <- findThreshold(sub_tree)
   
   clusters <- mclapply(clades, pickClust, mc.cores=numCores) %>%
     compact() %>%
@@ -513,9 +513,9 @@ branchWise <- function(tree, branch_length_limit, make_tree) {
   ## Remove singleton nodes (non-bifurcating branches) by using bifurcate() function or extracting entire clade.
   
   if (make_tree=="bifurcate") {
-  clusters <- list.filter(clusters, length(label) >= 4)
-  clusters <- bifurcate(tree, clusters)
-  clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
+    clusters <- list.filter(clusters, length(label) >= 4)
+    clusters <- bifurcate(tree, clusters)
+    clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
   } else {
     if (make_tree=="pullClade") {
       clusters <- pullClade(tree, clusters)
@@ -523,16 +523,16 @@ branchWise <- function(tree, branch_length_limit, make_tree) {
       if (make_tree=="addLeaves") {
         clusters <- addLeaves(tree, clusters)
         clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
-        }
       }
     }
-
+  }
+  
   clusters <-  list.filter(clusters, sum(label %in% tree$tip.label) >= 5)
   
   return(clusters)
 }
 phylopart <- function(tree, branch_length_limit) {
- 
+  
   
   clusters <- list()
   for (clade in seq_along(clades)) {
@@ -548,27 +548,27 @@ phylopart <- function(tree, branch_length_limit) {
   return(clusters)
 }
 benchmark <- function(clusters, true_clusters) {
-# First benchmark true clusters
-compareClusters <- function(x,y) { #true clusters=x, clusters=y
-  state <- NA
-  proportion <- NA
-  additional <- NA
-  true_taxa <- NA
-  identified_taxa <- NA
-  
-  if (isTRUE(
-     names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ',')))))) %in% 
-     names(table(gsub(".+\\_([A-Z])", "\\1", y$label))) &
-     sum(unlist(str_split(x$taxa, ',')) %in% y$label) >= 0.70*length(unlist(str_split(x$taxa, ','))))) {
-     #length(y$label))) {
-     state <- names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ','))))))
-     proportion <- sum(y$label %in% unlist(str_split(x$taxa, ',')))/
-       length(unlist(str_split(x$taxa, ',')))
-     additional <- (length(y$label)-sum(y$label %in% unlist(str_split(x$taxa, ','))))/
-       length(y$label)
-     true_taxa <- x$taxa
-     identified_taxa <- paste(y$label, sep=",", collapse=",")
-  } else {
+  # First benchmark true clusters
+  compareClusters <- function(x,y) { #true clusters=x, clusters=y
+    state <- NA
+    proportion <- NA
+    additional <- NA
+    true_taxa <- NA
+    identified_taxa <- NA
+    
+    if (isTRUE(
+      names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ',')))))) %in% 
+      names(table(gsub(".+\\_([A-Z])", "\\1", y$label))) &
+      sum(unlist(str_split(x$taxa, ',')) %in% y$label) >= 0.70*length(unlist(str_split(x$taxa, ','))))) {
+      #length(y$label))) {
+      state <- names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ','))))))
+      proportion <- sum(y$label %in% unlist(str_split(x$taxa, ',')))/
+        length(unlist(str_split(x$taxa, ',')))
+      additional <- (length(y$label)-sum(y$label %in% unlist(str_split(x$taxa, ','))))/
+        length(y$label)
+      true_taxa <- x$taxa
+      identified_taxa <- paste(y$label, sep=",", collapse=",")
+    } else {
       state1 <-  names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ','))))))
       proportion1=0
       additional1=NA
@@ -588,88 +588,88 @@ compareClusters <- function(x,y) { #true clusters=x, clusters=y
       identified_taxa <- rbind(identified_taxa1, identified_taxa2)
       
     }
-  performance <- data.frame(state=state, proportion=proportion, additional=additional, 
-                    true_taxa=true_taxa, identified_taxa=identified_taxa, 
-                    stringsAsFactors = F)
-  return(performance)
-}
+    performance <- data.frame(state=state, proportion=proportion, additional=additional, 
+                              true_taxa=true_taxa, identified_taxa=identified_taxa, 
+                              stringsAsFactors = F)
+    return(performance)
+  }
   
-performance <- mclapply(true_clusters, function(x) lapply(clusters, function(y) compareClusters(x,y)), mc.cores=numCores)
-performance <- mclapply(performance, rbindlist, mc.cores = numCores)
-performance <- rbindlist(performance) %>% dplyr::distinct()
-
- 
- ## If multiple clusters as part of the same true cluster are identified, add proportions together (because distinct)
- # performance <- lapply(performance, function(x) {
- #   state=x$state[1]
- #   taxa=x$taxa
- #   proportion=sum(x$proportion)
- #   
- #   return(data.frame(state=state, proportion, taxa=taxa, stringsAsFactors = F))
- # })
- 
-
-## Get rid of copies of 1 and 0 proportions
-copy <- performance
-unwanted <- NULL
-i <-1
-while(i<=nrow(copy)) {
-  for (j in 1:nrow(performance)) {
-    if(isTRUE(copy$proportion[i]==0 & performance$proportion[j]>0 &
-              copy$state[i]==performance$state[j] &
-              copy$true_taxa[i]==performance$true_taxa[j])) {
-      unwanted <- rbind(unwanted, copy[i,])
+  performance <- mclapply(true_clusters, function(x) lapply(clusters, function(y) compareClusters(x,y)), mc.cores=numCores)
+  performance <- mclapply(performance, rbindlist, mc.cores = numCores)
+  performance <- rbindlist(performance) %>% dplyr::distinct()
+  
+  
+  ## If multiple clusters as part of the same true cluster are identified, add proportions together (because distinct)
+  # performance <- lapply(performance, function(x) {
+  #   state=x$state[1]
+  #   taxa=x$taxa
+  #   proportion=sum(x$proportion)
+  #   
+  #   return(data.frame(state=state, proportion, taxa=taxa, stringsAsFactors = F))
+  # })
+  
+  
+  ## Get rid of copies of 1 and 0 proportions
+  copy <- performance
+  unwanted <- NULL
+  i <-1
+  while(i<=nrow(copy)) {
+    for (j in 1:nrow(performance)) {
+      if(isTRUE(copy$proportion[i]==0 & performance$proportion[j]>0 &
+                copy$state[i]==performance$state[j] &
+                copy$true_taxa[i]==performance$true_taxa[j])) {
+        unwanted <- rbind(unwanted, copy[i,])
       }
-  } # End loop along performance
-i=i+1
-}
-
-if(!is.null(unwanted)) {
-performance <- setdiff(performance, unwanted)
-} else {performance <- performance }
-
-## Get rid of copies of 1 and 0 proportions
-copy <- performance
-unwanted <- NULL
-i <-1
-while(i<=nrow(copy)) {
-  for (j in 1:nrow(performance)) {
-    if(isTRUE(is.na(copy$proportion[i]) & performance$proportion[j]>0 &
-              copy$state[i]==performance$state[j] &
-              copy$identified_taxa[i]==performance$identified[j])) {
-      unwanted <- rbind(unwanted, copy[i,])
-    }
-  } # End loop along performance
-  i=i+1
-}
-if(!is.null(unwanted)) {
-  performance <- setdiff(performance, unwanted)
-} else {performance <- performance }
-return(performance)
+    } # End loop along performance
+    i=i+1
+  }
+  
+  if(!is.null(unwanted)) {
+    performance <- setdiff(performance, unwanted)
+  } else {performance <- performance }
+  
+  ## Get rid of copies of 1 and 0 proportions
+  copy <- performance
+  unwanted <- NULL
+  i <-1
+  while(i<=nrow(copy)) {
+    for (j in 1:nrow(performance)) {
+      if(isTRUE(is.na(copy$proportion[i]) & performance$proportion[j]>0 &
+                copy$state[i]==performance$state[j] &
+                copy$identified_taxa[i]==performance$identified[j])) {
+        unwanted <- rbind(unwanted, copy[i,])
+      }
+    } # End loop along performance
+    i=i+1
+  }
+  if(!is.null(unwanted)) {
+    performance <- setdiff(performance, unwanted)
+  } else {performance <- performance }
+  return(performance)
 }
 calculateNe <- function(cluster, tree) {
   if (isTRUE("phylo" %in% class(cluster))) {  
     fit <- ltt(tree, plot=F)
-    } else {
-      if (isTRUE("tbl" %in% class(cluster) | "data.table" %in% class(cluster))) {
+  } else {
+    if (isTRUE("tbl" %in% class(cluster) | "data.table" %in% class(cluster))) {
       x <- keep.tip(tree, cluster$label[cluster$label %in% tree$tip.label])
-     #  res=round(max(nodeHeights(x))/days) # Total Ne set to every two weeks, but setting clusters up for every week
+      #  res=round(max(nodeHeights(x))/days) # Total Ne set to every two weeks, but setting clusters up for every week
       #  fit <- tryCatch(skygrowth.map(x, res=res, tau0=0.1), error=function(e) NULL)
       #  p <- data.frame(time=fit$time, nemed=fit$ne, ne_ci=fit$ne_ci)
       fit <- tryCatch(ltt(x, plot=F), error=function(e) NULL)
-      }
     }
+  }
   return(fit)
 }
 calculateRe <- function(Ne, conf.level=0.95) {
   s <- 100 # sample size of 100
-#  psi <- rnorm(s, 0.038, 0.014) #Duration of infection around 14 days 
+  #  psi <- rnorm(s, 0.038, 0.014) #Duration of infection around 14 days 
   psi <- rnorm(s, 14, 5) #Duration of infection around 14 days -incubation period of 5 days
-#  psi <- rnorm(s, 9, 5) #Duration of infection around 14 days -incubation period of 5 days
+  #  psi <- rnorm(s, 9, 5) #Duration of infection around 14 days -incubation period of 5 days
   Z=qnorm(0.5*(1 + conf.level))
   Re <- list()
-    if (isTRUE(nrow(Ne) >2)) {
-      for (i in 2:nrow(Ne)) {
+  if (isTRUE(nrow(Ne) >2)) {
+    for (i in 2:nrow(Ne)) {
       time = Ne$time[i-1]
       Re.dist = sample(1+psi*(Ne$ne[i]-Ne$ne[i-1])/((Ne$time[i]-Ne$time[i-1])*Ne$ne[i-1]),
                        size=s, replace=F)
@@ -678,8 +678,8 @@ calculateRe <- function(Ne, conf.level=0.95) {
       LCL = exp(mean(logRe) - Z*SElogRe) 
       UCL = exp(mean(logRe) + Z*SElogRe) 
       Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")"))
-      } 
-      } else {Re[[1]] <- NULL}
+    } 
+  } else {Re[[1]] <- NULL}
   Re <- do.call("rbind",Re)
 }
 # calculateOster <- function(cluster, tree) {
@@ -702,8 +702,8 @@ calculateRe <- function(Ne, conf.level=0.95) {
 # }
 
 #tr <- lapply(clusters, function(x) calculateOster(x, tree@phylo))
-  
-  
+
+
 modelEffective <- function() {
   
   clusterMetadata <- function(tree, clusters) {
@@ -903,49 +903,49 @@ modelEffective <- function() {
   # assign("total_Ne_model", total_Ne_model, envir = globalenv())
   # 
   # clusters_Ne_model <- lapply(clusters_Ne_df, modelFit)
-   
-   modelNe_growth <- function(Ne_df) {
-     df <- data.frame(x=Ne_df$time, y=Ne_df$ne)
-     df <- df[-1,]
-     
-      repeat {
-        i <- 2
-       while (i <= nrow(df)) {
-       if (isTRUE(df$x[i]==df$x[i-1])){
-         min_y <- min(df$y[i-1],df$y[i])
-         unwanted <- df[df$y== min_y & (df$x==df$x[i] | df$x==df$x[i-1]),]
-       } else{ unwanted <- data.frame(x=NA, y=NA)}
-         df <- setdiff(df, unwanted)
-       i <- i+1
-       }
-        if(length(unique(df$x))==length(df$x)) {
-          break
-        }
+  
+  modelNe_growth <- function(Ne_df) {
+    df <- data.frame(x=Ne_df$time, y=Ne_df$ne)
+    df <- df[-1,]
+    
+    repeat {
+      i <- 2
+      while (i <= nrow(df)) {
+        if (isTRUE(df$x[i]==df$x[i-1])){
+          min_y <- min(df$y[i-1],df$y[i])
+          unwanted <- df[df$y== min_y & (df$x==df$x[i] | df$x==df$x[i-1]),]
+        } else{ unwanted <- data.frame(x=NA, y=NA)}
+        df <- setdiff(df, unwanted)
+        i <- i+1
       }
-
-
-     cc <- check_curve(df$x, df$y)$ctype
-     if (cc=="convex") {
-       model="constant"
-     } else {
-       if (cc=="concave") {
-         model="growth"
-       } else { model="mixed"}
-     }
-     
-     rmax <- list()
-     for (i in 2:nrow(df)) {
-       rmax[[i]] <- (df$y[i]-df$y[i-1])/(df$x[i]-df$x[i-1])
-     }
-     rmax <- max(do.call("rbind",rmax), na.rm=T)
-     model_data <- data.frame(model=model, rmax=1/rmax)
-     Ne_df <- data.frame(time=df$x, ne=df$y)
+      if(length(unique(df$x))==length(df$x)) {
+        break
+      }
+    }
+    
+    
+    cc <- check_curve(df$x, df$y)$ctype
+    if (cc=="convex") {
+      model="constant"
+    } else {
+      if (cc=="concave") {
+        model="growth"
+      } else { model="mixed"}
+    }
+    
+    rmax <- list()
+    for (i in 2:nrow(df)) {
+      rmax[[i]] <- (df$y[i]-df$y[i-1])/(df$x[i]-df$x[i-1])
+    }
+    rmax <- max(do.call("rbind",rmax), na.rm=T)
+    model_data <- data.frame(model=model, rmax=1/rmax)
+    Ne_df <- data.frame(time=df$x, ne=df$y)
     return(cbind(Ne_df, model_data))
-   }
-   
-   total_Ne_model <- modelNe_growth(total_Ne_df)
-   assign("total_Ne_model", total_Ne_model, envir = globalenv())
-   clusters_Ne_model <- lapply(clusters_Ne_df, modelNe_growth)
+  }
+  
+  total_Ne_model <- modelNe_growth(total_Ne_df)
+  assign("total_Ne_model", total_Ne_model, envir = globalenv())
+  clusters_Ne_model <- lapply(clusters_Ne_df, modelNe_growth)
   c_root_age <- list()
   for (i in seq_along(clusters_Ne_model)) {
     c_root_age[[i]] <- unique(subset(metadata$root_age, metadata$cluster_id == names(clusters_Ne_df)[i] & !is.na(metadata$cluster_id)))
@@ -967,11 +967,11 @@ growthMetrics <- function(clusters, clusters_Ne_model, performance) {
     t_frac <- (max_t-min(ne_model$time))/(max(ne_model$time)-min(ne_model$time))
     rmax <- ne_model$rmax[1]
     
-#    t1 <- min(ne_model$time)
-#    t2 <- max(ne_model$time)
-#    ne1 <- min(ne_model$ne[ne_model$time == t1])
-#    ne2 <- max(ne_model$ne[ne_model$time == t2])
-#    r <- (ne2-ne1)/(t2-t1)
+    #    t1 <- min(ne_model$time)
+    #    t2 <- max(ne_model$time)
+    #    ne1 <- min(ne_model$ne[ne_model$time == t1])
+    #    ne2 <- max(ne_model$ne[ne_model$time == t2])
+    #    r <- (ne2-ne1)/(t2-t1)
     model <- ne_model$model[1]
     growth_rate <- data.frame(t_frac=t_frac, rmax=rmax, model=model)
     if (model=="growth") {
@@ -982,13 +982,13 @@ growthMetrics <- function(clusters, clusters_Ne_model, performance) {
       } else {model=model}
     }
     return(data.frame(t_frac=t_frac, rmax=rmax, model=model))
-    }
+  }
   
   total_Ne_growth <- growthPeriod(total_Ne_model)
   cluster_Ne_growth <- mclapply(clusters_Ne_model, growthPeriod)
   
   
-
+  
   growth_criteria <- NULL
   ## Calculate slopes for Ne and ltt, and record R0
   for (i in seq_along(clusters)) {
@@ -1000,8 +1000,8 @@ growthMetrics <- function(clusters, clusters_Ne_model, performance) {
     max_r <- cluster_Ne_growth[[i]]$rmax
     rel_max_r <- max_r/total_Ne_growth$rmax
     
- #   r <- cluster_Ne_growth[[i]]$r
-#    rel_r <- r/total_Ne_growth$r
+    #   r <- cluster_Ne_growth[[i]]$r
+    #    rel_r <- r/total_Ne_growth$r
     
     t_frac <- cluster_Ne_growth[[i]]$t_frac
     ## Report whether growth occurred 
@@ -1017,8 +1017,8 @@ growthMetrics <- function(clusters, clusters_Ne_model, performance) {
                                         t_frac=t_frac,
                                         max_r = max_r,
                                         rel_max_r = rel_max_r,
-#                                        r = r,
-#                                        rel_r = rel_r,
+                                        #                                        r = r,
+                                        #                                        rel_r = rel_r,
                                         pybus_gamma = gamma,
                                         mean_R0 = mean_R0,
                                         lower_R0 = lower_R0,
@@ -1026,8 +1026,8 @@ growthMetrics <- function(clusters, clusters_Ne_model, performance) {
                                         dynamic=NA,
                                         priority=NA,
                                         stringsAsFactors = F))
-    } # End loop along clusters
-
+  } # End loop along clusters
+  
   # Label as growing, not growing, or dead according to ltt slope
   for (i in 1:nrow(growth_criteria)) {
     if (isTRUE(growth_criteria$model[i] == "constant")){
@@ -1035,11 +1035,11 @@ growthMetrics <- function(clusters, clusters_Ne_model, performance) {
     } else {
       if (isTRUE(growth_criteria$model[i] == "mixed" | growth_criteria$model[i] == "growth")){
         growth_criteria$dynamic[i] <- "growth"
-    } else {
-      if (isTRUE(growth_criteria$model[i] == "decay")){
-        growth_criteria$dynamic[i] <- "decay"
-    }
-    }
+      } else {
+        if (isTRUE(growth_criteria$model[i] == "decay")){
+          growth_criteria$dynamic[i] <- "decay"
+        }
+      }
     }
     n <- length(unique(metadata$ID))/10000*100
     if (isTRUE(growth_criteria$rel_max_r[i] > n)){
@@ -1047,7 +1047,7 @@ growthMetrics <- function(clusters, clusters_Ne_model, performance) {
     } else {
       if (isTRUE(growth_criteria$rel_max_r[i] <= n)){
         growth_criteria$priority[i] <- "low priority"
-    }
+      }
     }
   }
   performance <- merge(performance, growth_criteria, by=c("state", "identified_taxa"), all.x=T)
@@ -1211,6 +1211,8 @@ if (opt$cluster == "b") {
   }
 }
 
+proc.time() - ptm
+
 ## Do not continue if no clusters found ############################################################
 if (length(clusters)==0) {
   print("No clusters detected. Saving null output...")
@@ -1289,9 +1291,9 @@ if (opt$leaves == "") {
                opt$threshold))
 } else {
   setwd(paste0("/blue/salemi/brittany.rife/dynamite/simulations/", 
-             opt$cluster, "/", 
-             opt$leaves, "/perc_",
-             opt$threshold))
+               opt$cluster, "/", 
+               opt$leaves, "/perc_",
+               opt$threshold))
 }
 
 print("Saving results...")
