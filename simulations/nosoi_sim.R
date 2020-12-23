@@ -187,27 +187,70 @@ save.tree <- function(){
   #                                            legend.key = element_blank()) 
   #set.seed(5905950) 
   
+  
   getSample <- function(SimulationSingle) {
-    table.hosts <- getTableHosts(SimulationSingle, pop="A")
-    sampled.hosts <- sample(table.hosts$hosts.ID, round(2.5*last(cum.p$data$t)), replace=F)
     int.nodes <- sample((Ntip(sim.tree@phylo)+2):(Ntip(sim.tree@phylo)+sim.tree@phylo$Nnode)) #randomize order of internal nodes
-    tcs.list <- rep(list(NULL),2)
-    ## move along internal nodes and stop when you have two clades with 10-20 individuals.
-    s <- round(rnorm(10,15,3))
-    for (i in seq_along(tcs.list)){
-      while(is.null(tcs.list[[i]])){
-        true.cluster <- extract.clade(sim.tree@phylo, sample(int.nodes, 1))
+    n <- unique(sum_sim$dynamics$state[sum_sim$dynamics$state != "A"]) 
+    s <- seq(5,30,1)
+
+    state.list <- list()
+    for (i in 1:length(n)) {
+      nodes <- sample(sim.tree@data$node[sim.tree@data$state==n[i]])
+      state <- n[i]
+      state.list[[i]] <- data.frame(nodes=nodes, state=state)
+      state.list[[i]] <- dplyr::filter(state.list[[i]],
+                                       nodes %in% int.nodes)
+    }
+      
+
+    sampleState <- function(state) {
+      max_length <- length(state$nodes)
+      tcs <- data.frame(taxa=NA, state=NA)
+      i=1
+      while (isTRUE(is.na(tcs$taxa) & i <= max_length)) {
+        n=state$nodes[i]    
+        tcs.phylo <- extract.clade(sim.tree@phylo, n)
+        tcs.taxa <- subset(sim.tree@data, sim.tree@data$host %in% tcs.phylo$tip.label)
+        if(length(unique(tcs.taxa$host)) %in% s &
+           length(grep(state$state[1], tcs.taxa$state)) >= 0.95*length(tcs.taxa$state)) {
+          tcs <- data.frame(taxa=tcs.taxa$host, state=state$state[1])
+          i=i
+        } else {
+          tcs <- data.frame(taxa=NA, state=NA)
+          i=i+1}
+      } # End while loop
+      return(tcs)
+    } # End function
+   
+   
+    tcs.list <- lapply(state.list, sampleState)
+    s_rand <- round(rnorm(10,20,10))
+    group_A <- sample(sim.tree@data$node[sim.tree@data$state=="A"])
+    group_A <- group_A[group_A %in% int.nodes]
+    
+    sampleA <- function(group_A) {
+      cluster_A <- NULL
+      while(is.null(cluster_A)){
+        true.cluster <- extract.clade(sim.tree@phylo, sample(group_A, 1))
         true.cluster <- subset(sim.tree@data, sim.tree@data$host %in% true.cluster$tip.label)
-#          merge(., as_tibble(sim.tree@phylo), by="node")
-        if(length(unique(true.cluster$host)) %in% s &
+        if(length(unique(true.cluster$host)) %in% s_rand &
            length(grep("A", true.cluster$state)) >= 0.95*length(true.cluster$state)) {
-           tcs.list[[i]] <- true.cluster
+          cluster_A <- data.frame(taxa=true.cluster$host, state="A")
         }
       }
+      return(cluster_A)
     }
     
-    ## Add these individuals to list of randomly sampled invididuals
-    sampled.hosts <- unique(c(sampled.hosts, unname(unlist(lapply(tcs.list, "[", 'host')))))
+    group_A_cluster <- sampleA(group_A)
+    tcs.list <- append(list(group_A_cluster), tcs.list) %>%
+      Filter(function(a) any(!is.na(a)), .)
+ 
+    
+    
+    table.hosts <- getTableHosts(SimulationSingle, pop="A")
+    sampled.hosts <- sample(table.hosts$hosts.ID, round(3*last(cum.p$data$t)), replace=F)
+    ## Add these individuals to list of randomly sampled individuals
+    sampled.hosts <- unique(c(sampled.hosts, unname(unlist(lapply(tcs.list, "[", 'taxa')))))
     ## Extract tree for list of individuals from the full simulation tree
     sampled.tree <- sampleTransmissionTreeFromExiting(sim.tree, sampled.hosts)
     assign("tcs.list", tcs.list, envir = globalenv()) # Remember now a tibble
@@ -221,8 +264,12 @@ save.tree <- function(){
   
   sampled.tree <- as_tibble(sampled.tree)
   dirtrans_clusters <- mclapply(tcs.list, function(x) {
-    subset(sampled.tree, sampled.tree$label %in% x$host)},
+    subset(sampled.tree, sampled.tree$label %in% x$taxa)},
     mc.cores=numCores)
+  dirtrans_clusters <- mclapply(dirtrans_clusters, function(x) {
+    x$label <- paste0(x$label, "_", x$state)
+    return(x)
+  })
   saveRDS(dirtrans_clusters, paste0("dirtrans_clusters_", sim_index, ".rds"))
   
 

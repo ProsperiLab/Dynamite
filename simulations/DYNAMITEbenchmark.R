@@ -5,18 +5,19 @@ rm(list=ls())
 
 
 # List of packages for session
-.packages <-  c("optparse", "remotes", "phytools", "treeio", "dplyr", "plyr", "tidyr", "tidytree", "data.table", 
-                "parallel", "stringr", "rlist", "paleotree", "phylodyn",
-                "ggtree", "drc", "growthrates", "TreeTools", "geiger") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
-.github_packages <- c("emillykkejensen/familyR", "mrc-ide/skygrowth") 
+.packages <-  c("optparse", "remotes", "phytools", "treeio", "dplyr",  
+                "plyr", "tidyr", "tidytree", "data.table",
+                "parallel", "stringr", "rlist",  "phylodyn",
+                "ggtree", "ggplot2", "TreeTools", "geiger", "adephylo", "inflection") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
+.github_packages <- c("emillykkejensen/familyR") # "mrc-ide/skygrowth"
 
 # # Install CRAN packages (if not already installed)
 # .inst <- .packages %in% installed.packages()
 # if(length(.packages[!.inst]) > 0) install.packages(.packages[!.inst])
 # .inst_github <- .packages %in% installed.packages()
 # ## Install GitHub packages(if not already installed)
-# if(length(github_packages[!.inst_github]) > 0) try(remotes::install_github(github_packages[!.inst_github]))
-# if(length(github_packages[!.inst_github]) > 0) try(devtools::install_github(github_packages[!.inst_github]))
+# if(length(.github_packages[!.inst_github]) > 0) try(remotes::install_github(.github_packages[!.inst_github]))
+# if(length(.github_packages[!.inst_github]) > 0) try(devtools::install_github(.github_packages[!.inst_github]))
 
 # Load packages into session 
 lapply(.packages, require, character.only=TRUE)
@@ -24,12 +25,12 @@ lapply(gsub(".+\\/(.+)", "\\1", .github_packages), require, character.only=TRUE)
 numCores <- detectCores()
 
 option_list = list(
-  make_option(c("-s", "--sim_index"), type="numeric"),
+  make_option(c("-s", "--sim_index"), type="numeric", default=666),
   make_option(c("-a", "--cluster"), type="character", default="b", 
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= phylopart]", metavar="character"),
   make_option(c("-l", "--leaves"), type="character", default="", 
               help="choice of transformation to tree from bifurcating or addLeaves [default=empty]", metavar="character"),
-  make_option(c("-t", "--threshold"), type="numeric", default=0.05, 
+  make_option(c("-t", "--threshold"), type="numeric", default=0.075, 
               help="branch length threshold [default= 0.05]", metavar="numeric")
 ); 
 
@@ -42,9 +43,12 @@ if (is.null(opt$s)){
   stop("At least one argument must be supplied (input file).n", call.=FALSE)
 }
 
+print(opt)
+
 ### Functions ##############################################################################################################
 
 `%notin%` <- Negate(`%in%`) # Just plain useful
+`%!=na%` <- function(e1, e2) (is.na(e1) & is.na(e2)) # Also useful for finding nas in two dataframes
 
 true.cluster.dyn <- function(conf.level=0.95){
   cluster_dynamics <- data.frame(state=rbind('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'),
@@ -212,93 +216,14 @@ define.clades <- function(sub_tree) {
   
   
 } # End defineClades function
-find.true.clusters <- function(family_tree, clades) {
-  true_clusters <- list()
-  for (clade in seq_along(clades)) { # subtrees (and whole tree) dataframes correspond to output dataframes from get_children function in familyR (see below)
-    anc <- tail(familyR::get_parents(family_tree, clades[[clade]]$from[1], return_nodes=T)[[2]]$label, n=1)
-    for (state in cluster_dynamics$state[cluster_dynamics$state %notin% c('A')]) { # states correspond to any letter that is not A, which is background
-      if ((length(grep(state, clades[[clade]]$label)) >= 0.95*nrow(clades[[clade]])) & # If 90% of subtree is comprised of one particular state
-          (length(grep(state, clades[[clade]]$label[1])) == 1) & # And if the first child in the subtree belongs to that state
-          (length(grep(state, tail(familyR::get_parents(family_tree, clades[[clade]]$from[1], 
-                                                        return_nodes=T)[[2]]$label, n=2))) == 1)) { # AND if parent (indexed from whole tree) of that parent is not that state
-        true_clusters[[clade]] <- data.frame(cluster_id = paste0(state,clade), # This will be some arbitrary name you assign to the cluster, such as C1, C2, C3, etc.
-                                             taxa = toString(c(anc, clades[[clade]]$label)), # list of taxa 
-                                             mean_R0 = cluster_dynamics$mean_R0[cluster_dynamics$state == state],
-                                             upper_R0 = cluster_dynamics$upper_R0[cluster_dynamics$state == state],
-                                             lower_R0 = cluster_dynamics$lower_R0[cluster_dynamics$state == state])
-                                             #dynamic = cluster_dynamics$dynamic[cluster_dynamics$state == state],
-                                             #birth = cluster_dynamics$birth[cluster_dynamics$state == state]) # dynamic corresponds to the dynamic state (growth, etc.) assigned to the cluster state
-      } else{NULL}
-    } # End for states DNE A (the code below is for when births are being tested (e.g., D -> E))
-    ## Now need to account for D (beause not going to be 95%)
-    # state <- cluster_dynamics$state[cluster_dynamics$state %in% c('D','E')]
-    #   if ((length(grep(state[1], clades[[clade]]$label)) + 
-    #        length(grep(state[2], clades[[clade]]$label)) >= 0.95*nrow(clades[[clade]])) &
-    #       (length(grep(state[1], clades[[clade]]$label[1])) == 1) &
-    #       (length(grep(state[1], tail(familyR::get_parents(family_tree, clades[[clade]]$from[1], 
-    #                                                        return_nodes=T)[[2]]$label, n=2))) == 1)) {
-    #     true_clusters[[clade]] <- data.frame(cluster_id = paste0(state[1],clade), # This will be some arbitrary name you assign to the cluster, such as C1, C2, C3, etc.
-    #                                          #taxa = toString(clades[[clade]]$label[grepl(state[1], clades[[clade]]$label)]), # list of taxa 
-    #                                          taxa = toString(c(anc, clades[[clade]]$label)), # list of taxa 
-    #                                          mean_R0 = cluster_dynamics$mean_R0[cluster_dynamics$state == state[1]],
-    #                                          upper_R0 = cluster_dynamics$upper_R0[cluster_dynamics$state == state[1]],
-    #                                          lower_R0 = cluster_dynamics$lower_R0[cluster_dynamics$state == state[1]],
-    #                                          #dynamic = cluster_dynamics$dynamic[cluster_dynamics$state == state[1]],
-    #                                          birth = cluster_dynamics$birth[cluster_dynamics$state == state[1]]) # dynamic corresponds to the dynamic state (growth, etc.) assigned to the cluster state
-    #   } else{NULL} # End for state 'D'
-  # state <- "E"
-  # if ((length(grep(state, clades[[clade]]$label)) >= 0.95*nrow(clades[[clade]])) &
-  #     (length(grep(state, clades[[clade]]$label[1])) == 1) &
-  #     (length(grep(state, tail(familyR::get_parents(family_tree, clades[[clade]]$from[1], 
-  #                                                   return_nodes=T)[[2]]$label, n=2))) == 1)) {
-  #   true_clusters[[clade]] <- data.frame(cluster_id = paste0(state,clade), # This will be some arbitrary name you assign to the cluster, such as C1, C2, C3, etc.
-  #                                        taxa = toString(c(anc, clades[[clade]]$label)), # list of taxa 
-  #                                        mean_R0 = cluster_dynamics$mean_R0[cluster_dynamics$state == state],
-  #                                        upper_R0 = cluster_dynamics$upper_R0[cluster_dynamics$state == state],
-  #                                        lower_R0 = cluster_dynamics$lower_R0[cluster_dynamics$state == state],
-  #                                        #dynamic = cluster_dynamics$dynamic[cluster_dynamics$state == state],
-  #                                        birth = cluster_dynamics$birth[cluster_dynamics$state == state]) # dynamic corresponds to the dynamic state (growth, etc.) assigned to the cluster state
-  # } else{NULL} # End for state 'E'
-} # End loop along clades
-  return(Filter(Negate(function(y) is.null(unlist(y))), true_clusters))
-} # End function
-merge.overlap.clust.true <- function(true_clusters) {
-  copy <- true_clusters
-  unwanted <- list()
-  unwanted2 <- list()
-  for (ct in seq_along(true_clusters)) { # Do not want to merge cluster 'F' with origin cluster 'E'
-    true_clusters[[ct]]$taxa <- gsub(" ", "", true_clusters[[ct]]$taxa) # Need to get rid of spaces
-    for (cc in seq_along(copy)) {
-      copy[[cc]]$taxa <- gsub(" ", "", copy[[cc]]$taxa) # Need to get rid of spaces
-      # if (is.na(true_clusters[[ct]]$birth) &
-      #     is.na(copy[[cc]]$birth) &
-      #     isTRUE(all(unlist(str_split(true_clusters[[ct]]$taxa, ',')) %in% unlist(str_split(copy[[cc]]$taxa, ','))) &
-      #            true_clusters[[ct]]$cluster_id != copy[[cc]]$cluster_id)) {
-      #   unwanted[[ct]] <- true_clusters[[ct]]
-      # } else {NULL}
-      # if (!is.na(true_clusters[[ct]]$birth) &
-      #     !is.na(copy[[cc]]$birth) &
-      #     isTRUE(all(unlist(str_split(true_clusters[[ct]]$taxa, ',')) %in% unlist(str_split(copy[[cc]]$taxa, ','))) &
-      #            true_clusters[[ct]]$cluster_id != copy[[cc]]$cluster_id)) {
-      #   unwanted2[[ct]] <- true_clusters[[ct]]
-      # } else {NULL}
-    } # End loop along copy
-  } # End loop along true
-  result <- setdiff(true_clusters, unwanted)
-  result <- setdiff(result, unwanted2)
-  return(result)
-} 
-add.test.clust <- function(true_clusters) {
+add.test.clust <- function() {
   dirtrans_clusters <- readRDS(file=paste0("dirtrans_clusters_", opt$sim_index, ".rds"))
-  dirtrans_clusters <- lapply(dirtrans_clusters, function(x) {
-    x <- x %>%
-      mutate(label = paste(label, state, sep="_"))
-  })
-  n <- length(true_clusters)
+#  n <- length(true_clusters) # Can be replaced with below since all true clusters now (but if switching back remember to change i to n+i below)
+  true_clusters <- list()
   state <- list()
   for (i in seq_along(dirtrans_clusters)){
   state[[i]] <- dirtrans_clusters[[i]]$state[1]
-  true_clusters[[n+i]] <- data.frame(cluster_id = paste0(state[[i]], "_direct"), # This will be some arbitrary name you assign to the cluster, such as C1, C2, C3, etc.
+  true_clusters[[i]] <- data.frame(cluster_id = paste0(state[[i]], "_direct"), # This will be some arbitrary name you assign to the cluster, such as C1, C2, C3, etc.
                                    taxa = str_replace_all(toString(unique(dirtrans_clusters[[i]]$label)), fixed(" "), ""), # list of taxa 
                                    mean_R0 = cluster_dynamics$mean_R0[cluster_dynamics$state == state[[i]]],
                                    upper_R0 = cluster_dynamics$upper_R0[cluster_dynamics$state == state[[i]]],
@@ -351,12 +276,12 @@ merge.overlap.clust <- function(clusters) {
 branchLengthLimit <- function(tree) {
   p.dist.mat.leaves <- cophenetic(tree)
   get.node.leaf.MPPD <- function(node,tree,distmat){
-    nlist <- tips(tree,node)
+    nlist <- geiger::tips(tree,node)
     foo <- distmat[nlist,nlist]
     return(median(foo[upper.tri(foo,diag=FALSE)]))
   } ## Given a node, tree, and distance matrix, return median   pairwise patristic distance (MPPD) of its leaves
   get.node.full.MPPD <- function(node,tree,distmat){
-    nlist <- tips(tree, node)
+    nlist <- geiger::tips(tree, node)
     elist <- tree$edge[which.edge(tree,nlist),2]
     foo <- distmat[elist,elist]
     return(median(foo[upper.tri(foo,diag=FALSE)]))
@@ -617,59 +542,169 @@ phylopart <- function(tree, branch_length_limit) {
   }
   clusters <- compact(clusters) %>%
     merge.nested.clust() %>%
-    #  merge.overlap.clust() %>% # Will not work well with support in labels
-    #  merge.nested.clust() %>%
+    merge.overlap.clust() %>% # Will not work well with support in labels
+    merge.nested.clust() %>%
     list.filter(length(label) >= 5)
   return(clusters)
 }
 benchmark <- function(clusters, true_clusters) {
 # First benchmark true clusters
-compareClusters <- function(x,y) {
-   if (isTRUE(
-     names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ',')))))) == 
-     names(which.max(table(gsub(".+\\_([A-Z])", "\\1", y$label)))) &
-     sum(y$label %in% unlist(str_split(x$taxa, ','))) >= 0.40*length(unlist(str_split(x$taxa, ','))))) {
+compareClusters <- function(x,y) { #true clusters=x, clusters=y
+  state <- NA
+  proportion <- NA
+  additional <- NA
+  true_taxa <- NA
+  identified_taxa <- NA
+  
+  if (isTRUE(
+     names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ',')))))) %in% 
+     names(table(gsub(".+\\_([A-Z])", "\\1", y$label))) &
+     sum(unlist(str_split(x$taxa, ',')) %in% y$label) >= 0.70*length(unlist(str_split(x$taxa, ','))))) {
      #length(y$label))) {
      state <- names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ','))))))
      proportion <- sum(y$label %in% unlist(str_split(x$taxa, ',')))/
-       length(unlist(str_split(x$taxa, ','))) 
-     }
-   else{ 
-     state <- names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ','))))))
-     proportion=0
+       length(unlist(str_split(x$taxa, ',')))
+     additional <- (length(y$label)-sum(y$label %in% unlist(str_split(x$taxa, ','))))/
+       length(y$label)
+     true_taxa <- x$taxa
+     identified_taxa <- paste(y$label, sep=",", collapse=",")
+  } else {
+      state1 <-  names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ','))))))
+      proportion1=0
+      additional1=NA
+      true_taxa1 <- x$taxa
+      identified_taxa1 <- NA
+      
+      state2 <-   names(which.max(table(gsub(".+\\_([A-Z])", "\\1", y$label))))
+      proportion2=NA
+      additional2 = 1
+      true_taxa2 <- NA
+      identified_taxa2 <- paste(y$label, sep=",", collapse=",")
+      
+      state <- rbind(state1, state2)
+      proportion <- rbind(proportion1, proportion2)
+      additional <- rbind(additional1, additional2)
+      true_taxa <- rbind(true_taxa1, true_taxa2)
+      identified_taxa <- rbind(identified_taxa1, identified_taxa2)
+      
+    }
+  performance <- data.frame(state=state, proportion=proportion, additional=additional, 
+                    true_taxa=true_taxa, identified_taxa=identified_taxa, 
+                    stringsAsFactors = F)
+  return(performance)
+}
+  
+performance <- mclapply(true_clusters, function(x) lapply(clusters, function(y) compareClusters(x,y)), mc.cores=numCores)
+performance <- mclapply(performance, rbindlist, mc.cores = numCores)
+performance <- rbindlist(performance) %>% dplyr::distinct()
 
-   }
-  taxa <- x$taxa
-   return(data.frame(state=state, proportion=proportion, taxa=taxa, stringsAsFactors = F))
- }
  
- performance <- mclapply(true_clusters, function(x) lapply(clusters, function(y) compareClusters(x,y)), mc.cores = numCores)
- performance <- mclapply(performance, rbindlist, mc.cores = numCores)
  ## If multiple clusters as part of the same true cluster are identified, add proportions together (because distinct)
- performance <- lapply(performance, function(x) {
-   state=x$state[1]
-   proportion=sum(x$proportion)
-   taxa=x$taxa
-   return(data.frame(state=state, proportion, taxa=taxa, stringsAsFactors = F))
- })
- performance <- rbindlist(performance) %>% dplyr::distinct()
- return(performance)
+ # performance <- lapply(performance, function(x) {
+ #   state=x$state[1]
+ #   taxa=x$taxa
+ #   proportion=sum(x$proportion)
+ #   
+ #   return(data.frame(state=state, proportion, taxa=taxa, stringsAsFactors = F))
+ # })
+ 
+
+## Get rid of copies of 1 and 0 proportions
+copy <- performance
+unwanted <- NULL
+i <-1
+while(i<=nrow(copy)) {
+  for (j in 1:nrow(performance)) {
+    if(isTRUE(copy$proportion[i]==0 & performance$proportion[j]>0 &
+              copy$state[i]==performance$state[j] &
+              copy$true_taxa[i]==performance$true_taxa[j])) {
+      unwanted <- rbind(unwanted, copy[i,])
+      }
+  } # End loop along performance
+i=i+1
+}
+
+if(!is.null(unwanted)) {
+performance <- setdiff(performance, unwanted)
+} else {performance <- performance }
+
+## Get rid of copies of 1 and 0 proportions
+copy <- performance
+unwanted <- NULL
+i <-1
+while(i<=nrow(copy)) {
+  for (j in 1:nrow(performance)) {
+    if(isTRUE(is.na(copy$proportion[i]) & performance$proportion[j]>0 &
+              copy$state[i]==performance$state[j] &
+              copy$identified_taxa[i]==performance$identified[j])) {
+      unwanted <- rbind(unwanted, copy[i,])
+    }
+  } # End loop along performance
+  i=i+1
+}
+if(!is.null(unwanted)) {
+  performance <- setdiff(performance, unwanted)
+} else {performance <- performance }
+return(performance)
 }
 calculateNe <- function(cluster, tree) {
-  if ("phylo" %in% class(cluster)) {  
+  if (isTRUE("phylo" %in% class(cluster))) {  
     fit <- ltt(tree, plot=F)
     } else {
-      if ("tbl" %in% class(cluster))
-      x <- extract.clade(tree, cluster$label)
+      if (isTRUE("tbl" %in% class(cluster) | "data.table" %in% class(cluster))) {
+      x <- keep.tip(tree, cluster$label[cluster$label %in% tree$tip.label])
      #  res=round(max(nodeHeights(x))/days) # Total Ne set to every two weeks, but setting clusters up for every week
       #  fit <- tryCatch(skygrowth.map(x, res=res, tau0=0.1), error=function(e) NULL)
       #  p <- data.frame(time=fit$time, nemed=fit$ne, ne_ci=fit$ne_ci)
       fit <- tryCatch(ltt(x, plot=F), error=function(e) NULL)
+      }
     }
   return(fit)
 }
-modelNe <- function() {
-  require(adephylo)
+calculateRe <- function(Ne, conf.level=0.95) {
+  s <- 100 # sample size of 100
+#  psi <- rnorm(s, 0.038, 0.014) #Duration of infection around 14 days 
+  psi <- rnorm(s, 14, 5) #Duration of infection around 14 days -incubation period of 5 days
+#  psi <- rnorm(s, 9, 5) #Duration of infection around 14 days -incubation period of 5 days
+  Z=qnorm(0.5*(1 + conf.level))
+  Re <- list()
+    if (isTRUE(nrow(Ne) >2)) {
+      for (i in 2:nrow(Ne)) {
+      time = Ne$time[i-1]
+      Re.dist = sample(1+psi*(Ne$ne[i]-Ne$ne[i-1])/((Ne$time[i]-Ne$time[i-1])*Ne$ne[i-1]),
+                       size=s, replace=F)
+      logRe = log(Re.dist)
+      SElogRe = sd(logRe)/sqrt(s) # standard deviation of 2, sample size of 10
+      LCL = exp(mean(logRe) - Z*SElogRe) 
+      UCL = exp(mean(logRe) + Z*SElogRe) 
+      Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")"))
+      } 
+      } else {Re[[1]] <- NULL}
+  Re <- do.call("rbind",Re)
+}
+# calculateOster <- function(cluster, tree) {
+#   
+#   if (isTRUE("phylo" %in% class(cluster))) {  
+#     cluster_size <- length(cluster$tip.label)-1
+#     sum_heights <- sum(nodeHeights(cluster))
+#     longest <- max(nodeHeights(cluster))
+#     tr <- cluster_size/sum_heights + longest
+#   } else {
+#     if (isTRUE("tbl" %in% class(cluster) | "data.table" %in% class(cluster))) {
+#       x <- keep.tip(tree, cluster$label[cluster$label %in% tree$tip.label])
+#       cluster_size <- length(x$tip.label)-1
+#       sum_heights <- sum(nodeHeights(x))
+#       longest <- max(nodeHeights(x))
+#       tr <- cluster_size/sum_heights + longest
+#     }
+#   }
+#   return(tr)
+# }
+
+#tr <- lapply(clusters, function(x) calculateOster(x, tree@phylo))
+  
+  
+modelEffective <- function() {
   
   clusterMetadata <- function(tree, clusters) {
     sts <- distRoot(tree@phylo, tips = "all", method="patristic")
@@ -716,99 +751,205 @@ modelNe <- function() {
   total_gamma <- total_Ne$gamma
   assign("total_gamma", total_gamma, envir = globalenv())
   
-  total_Ne_df <- data.frame(ne=total_Ne$ltt, time=total_Ne$times)
+  total_Ne_df <- data.frame(ne=total_Ne$ltt, time=total_Ne$times) %>% distinct()
   
   clusters_Ne <- lapply(clusters, function(x) calculateNe(x, tree@phylo))
   clusters_gamma <- mclapply(clusters_Ne, function(x) return(x$gamma))
   assign("clusters_gamma", clusters_gamma, envir = globalenv())
   
-  clusters_Ne_df <- mclapply(clusters_Ne, function(x) data.frame(ne=x$ltt, time=x$times), mc.cores=numCores)
-  
-  c_root_age <- NA
-  for (i in seq_along(clusters_Ne_df)) {
-    c_root_age[i] <- unique(metadata$root_age[metadata$cluster_id == names(clusters_Ne_df)[i] & !is.na(metadata$cluster_id)])
-    #  x1[i] <- max(metadata$time[metadata$cluster_id == names(clusters_Ne_df)[i]], na.rm=T)
-    clusters_Ne_df[[i]]$time <- clusters_Ne_df[[i]]$time + c_root_age[i]
-  }
-  
-  reslm_total <- function(Ne_df) {
-    result <- lm(Ne_df$ne ~ sin(2*pi/365*Ne_df$time)+cos(2*pi/365*Ne_df$time) +
-                   sin(2*pi/365*2*Ne_df$time)+cos(2*pi/365*2*Ne_df$time) +
-                   sin(2*pi/365*3*Ne_df$time)+cos(2*pi/365*3*Ne_df$time))
-    return(result)
-  }
-  
-  reslm_clusters <- function(Ne_df) {
-    result <- lm(Ne_df$ne ~ sin(2*pi/365*Ne_df$time)+cos(2*pi/365*Ne_df$time) +
-                   sin(2*pi/365*2*Ne_df$time)+cos(2*pi/365*2*Ne_df$time))
-    return(result)
-  }
-  
-  reslm_total <- reslm_total(total_Ne_df)
-  reslm_cluster <- mclapply(clusters_Ne_df, reslm_clusters, mc.cores=numCores)
-  
-  # plot(total_Ne_df$ne~total_Ne_df$time)
-  # lines(total_Ne_df$time,reslm_total$fitted,col=2)
-  
-  # plot(clusters_Ne_df[[2]]$ne~clusters_Ne_df[[2]]$time)
-  # lines(clusters_Ne_df[[2]]$time,reslm_cluster[[2]]$fitted,col=2)
-  
-  
-  model.coef <- NULL
-  model.coef.total <- rbind.data.frame(model.coef,
-                                       data.frame(Beta=reslm_total$coefficients[1], 
-                                                  k1=reslm_total$coefficients[2], 
-                                                  k2=reslm_total$coefficients[3],
-                                                  k3=reslm_total$coefficients[4],
-                                                  k4=reslm_total$coefficients[5],
-                                                  k5=reslm_total$coefficients[6],
-                                                  k6=reslm_total$coefficients[7]))
-  model.coef.cluster <- mclapply(reslm_cluster, function(x) {
-    rbind.data.frame(model.coef,
-                     data.frame(Beta=x$coefficients[1], 
-                                k1=x$coefficients[2], 
-                                k2=x$coefficients[3],
-                                k3=x$coefficients[4],
-                                k4=x$coefficients[5]))
+  clusters_Ne_df <- mclapply(clusters_Ne, function(x) {
+    distinct(data.frame(ne=x$ltt, time=x$times))
   }, mc.cores=numCores)
   
-  fun_fs1 = function(x, k1, k2, k3, k4, k5, k6, Beta){
-    y = k1*sin(2*pi/365*x)+k2*cos(2*pi/365*x) +
-      k3*sin(2*pi/365*2*x)+k4*cos(2*pi/365*2*x) +
-      k5*sin(2*pi/365*3*x)+k6*cos(2*pi/365*3*x)  + Beta
-    for (i in seq_along(y)) {
-      if (isTRUE(y[i]<0)) {
-        y[i] = 0
-      } else {y[i] = y[i]}}
-    return(y)}
-  
-  fun_fs2 = function(x, k1, k2, k3, k4,  Beta){
-    y = k1*sin(2*pi/365*x)+k2*cos(2*pi/365*x) +
-      k3*sin(2*pi/365*2*x)+k4*cos(2*pi/365*2*x)  + Beta
-    for (i in seq_along(y)) {
-      if (isTRUE(y[i]<0)) {
-        y[i] = 0
-      } else {y[i] = y[i]}}
-    return(y)}
-  
-  
-  fun_fs_total <- function(x) fun_fs1(x, model.coef.total$k1, model.coef.total$k2,
-                                      model.coef.total$k3, model.coef.total$k4,
-                                      model.coef.total$k5, model.coef.total$k6, model.coef.total$Beta)
-  
-  total_Ne_model <- fun_fs_total(seq(1,max(nodeHeights(tree@phylo)), 1))
-  total_Ne_model <- data.frame(time=seq(1,max(nodeHeights(tree@phylo)), 1), Ne=total_Ne_model)
-  assign("total_Ne_model", total_Ne_model, envir = globalenv())
-  
-  dates <- list()
-  clusters_Ne_model <- list()
-  fun_fs_cluster <- list()
-  for (i in seq_along(clusters_Ne_df)) {
-    fun_fs_cluster[[i]] <- function(x) fun_fs2(x, model.coef.cluster[[i]]$k1, model.coef.cluster[[i]]$k2,
-                                               model.coef.cluster[[i]]$k3, model.coef.cluster[[i]]$k4,model.coef.cluster[[i]]$Beta)
-    dates[[i]] <- seq(min(clusters_Ne_df[[i]]$time), max(clusters_Ne_df[[i]]$time), 1)
-    clusters_Ne_model[[i]] <- fun_fs_cluster[[i]](dates[[i]])
-    clusters_Ne_model[[i]] <- data.frame(time=dates[[i]], Ne=clusters_Ne_model[[i]])
+  # modelNe_log <- function(Ne_df) {
+  #     df <- data.frame(x=Ne_df$time, y=Ne_df$ne)
+  #     growth_fit <- nls(y~I(K / (1 + ((K - N0) / N0) * exp(-r * x))), data=df,
+  #                       start=list(N0=df$y[1], K=100, r=0.10), algorithm = "port",
+  #                       lower = list(N0 = 1, K = 5, r=0),
+  #                       upper = list(N0 = 5, K=1000, r=10))
+  # 
+  #     s_growth_fit <- summary(growth_fit)
+  #     model.coef <- NULL
+  #     model.coef <- rbind.data.frame(model.coef,
+  #                                         data.frame(N0=s_growth_fit$coefficients[1],
+  #                                                    K=s_growth_fit$coefficients[2],
+  #                                                    r=s_growth_fit$coefficients[3]))
+  # 
+  #     growth_fx <- function(x, N0, K, r) {
+  #        y = K / (1 + ((K - N0) / N0) * exp(-r * x))
+  #        if (isTRUE(y<0)) {
+  #          y = 0
+  #        } else {y = y}
+  #        return(y)}
+  #     growth_fx1 <- function(x) growth_fx(x, model.coef$N0, model.coef$K,
+  #                                         model.coef$r)
+  #     tmp <- data.frame(y=growth_fx1(df$x), x=df$x)
+  #     r2 <- summary(lm(df$y~tmp$y))$adj.r.squared
+  #     
+  #     new_times <- seq(min(df$x), max(df$x), 1)
+  #     modeled_growth <- data.frame(time=new_times, Ne=sapply(new_times, growth_fx1), model="logistic")
+  #     modeled_growth <- cbind(modeled_growth, model.coef)
+  #     return(modeled_growth)
+  # } # End function
+  # modelNe_decay <- function(Ne_df) {
+  #   df <- data.frame(x=Ne_df$time, y=Ne_df$ne)
+  #   growth_fit <- lm(df$y ~ sin(2*pi/df$x)+cos(2*pi/df$x))
+  #   model.coef <- NULL
+  #   model.coef <- rbind.data.frame(model.coef,
+  #                                  data.frame(Beta=growth_fit$coefficients[1], 
+  #                                             k1=growth_fit$coefficients[2],
+  #                                             k2=growth_fit$coefficients[3]))
+  #   growth_fx <- function(x, k1, k2, Beta){
+  #     y = k1*sin(2*pi/x)+ k2*cos(2*pi/x) + Beta
+  #     if (isTRUE(y<0) ){
+  #       y = 0
+  #     } else {y = y}
+  #     return(y)}
+  #   growth_fx1 <- function(x) growth_fx(x, model.coef$k1, model.coef$k2, model.coef$Beta)
+  #   new_times <- seq(min(df$x), max(df$x), 1)
+  #   modeled_growth <- data.frame(time=new_times, Ne=sapply(new_times, growth_fx1), model="decay")
+  #   if (is.nan(modeled_growth$Ne[1])) {
+  #     modeled_growth <- modeled_growth[-1,]
+  #   }
+  #   max_ne <- max(modeled_growth$Ne)
+  #   min_ne <- min(modeled_growth$Ne)
+  #   max_t <- modeled_growth$time[modeled_growth$Ne==max_ne]
+  #   min_t <- min(modeled_growth$time)
+  #   r = (max_ne-min_ne)/(max_t-min_t)
+  #   r2 <- summary(growth_fit)$adj.r.squared
+  #   
+  #   modeled_growth <- cbind(modeled_growth, model.coef, r, r2)
+  #   return(modeled_growth)
+  # } # End function
+  # modelNe_constant <- function(Ne_df) {
+  #   df <- data.frame(x=Ne_df$time, y=Ne_df$ne)
+  #   growth_fit <- nls(y ~ I(a * x^b), data=df, start=list(b=0.1, a=1), algorithm = "port",
+  #                     lower=list(b=0, a=0.1),
+  #                     upper=list(b=1, a=10), nls.control(warnOnly=T))
+  #   s_growth_fit <- summary(growth_fit)
+  #   model.coef <- NULL
+  #   model.coef <- rbind.data.frame(model.coef,
+  #                                  data.frame(b=s_growth_fit$coefficients[1], 
+  #                                             a=s_growth_fit$coefficients[2]))
+  #   
+  #   growth_fx <- function(x, b, a) {
+  #     y = a * x^b
+  #     if (isTRUE(y<0)) {
+  #       y = 0
+  #     } else {y = y}
+  #     return(y)}
+  #   growth_fx1 <- function(x) growth_fx(x, model.coef$b, model.coef$a)
+  #   tmp <- data.frame(y=growth_fx1(df$x), x=df$x)
+  #   r2 <- summary(lm(df$y~tmp$y))$adj.r.squared
+  #   new_times <- seq(min(df$x), max(df$x), 1)
+  #   modeled_growth <- data.frame(time=new_times, Ne=sapply(new_times, growth_fx1), model="constant")
+  #   r <- list()
+  #   for (i in 2:nrow(modeled_growth)) {
+  #     r[[i]] <- (modeled_growth$Ne[i]-modeled_growth$Ne[i-1])/(modeled_growth$time[i]-modeled_growth$time[i-1])
+  #   }
+  #     r <- max(do.call("rbind",r), na.rm=T)
+  #   modeled_growth <- cbind(modeled_growth, r, r2)
+  #   return(modeled_growth)
+  # } # End function
+  # modelNe_growth <- function(Ne_df) {
+  #   df <- data.frame(x=Ne_df$time, y=Ne_df$ne)
+  #   growth_fit <- nls(y ~ I(r * x^b), data=df, start=list(b=2, r=1), algorithm = "port",
+  #                     lower=list(b=2, r=0.01),
+  #                     upper=list(b=10, r=10), nls.control(warnOnly=T))
+  #   s_growth_fit <- summary(growth_fit)
+  #   model.coef <- NULL
+  #   model.coef <- rbind.data.frame(model.coef,
+  #                                  data.frame(b=s_growth_fit$coefficients[1], 
+  #                                             r=s_growth_fit$coefficients[2]))
+  #   
+  #   growth_fx <- function(x, b, r) {
+  #     y = r * x^b
+  #     if (isTRUE(y<0)) {
+  #       y = 0
+  #     } else {y = y}
+  #     return(y)}
+  #   growth_fx1 <- function(x) growth_fx(x, model.coef$b, model.coef$r)
+  #   tmp <- data.frame(y=growth_fx1(df$x), x=df$x)
+  #   r2 <- summary(lm(df$y~tmp$y))$adj.r.squared
+  #   new_times <- seq(min(df$x), max(df$x), 1)
+  #   modeled_growth <- data.frame(time=new_times, Ne=sapply(new_times, growth_fx1), model="growth")
+  #   r <- list()
+  #   for (i in 2:nrow(modeled_growth)) {
+  #     r[[i]] <- (modeled_growth$Ne[i]-modeled_growth$Ne[i-1])/(modeled_growth$time[i]-modeled_growth$time[i-1])
+  #   }
+  #   r <- max(do.call("rbind",r), na.rm=T)
+  #   modeled_growth <- cbind(modeled_growth, r, r2)
+  #   return(modeled_growth)
+  # } # End function
+  # 
+  # modelFit <- function(x) {
+  #   r2_growth <- tryCatch(modelNe_growth(x), error=function(e) {return(data.frame(r2=0))})
+  #   r2_constant <- tryCatch(modelNe_constant(x), error=function(e) {return(data.frame(r2=0))})
+  #   if(isTRUE(r2_growth$r2[1] >= r2_constant$r2[1])) {
+  #     result <- r2_growth
+  #   } else {
+  #     result <- r2_constant
+  #   }
+  #   r2_decay <- tryCatch(modelNe_decay(x), error=function(e) {return(data.frame(r2=0))})
+  #   if(isTRUE(r2_decay$r2[1] >= r2_constant$r2[1])) {
+  #     result2 <- r2_decay
+  #   } else {
+  #     result2 <- result
+  #   }
+  #   return(result)
+  # }
+  # 
+  # total_Ne_model <- modelFit(total_Ne_df)
+  # assign("total_Ne_model", total_Ne_model, envir = globalenv())
+  # 
+  # clusters_Ne_model <- lapply(clusters_Ne_df, modelFit)
+   
+   modelNe_growth <- function(Ne_df) {
+     df <- data.frame(x=Ne_df$time, y=Ne_df$ne)
+     df <- df[-1,]
+     
+      repeat {
+        i <- 2
+       while (i <= nrow(df)) {
+       if (isTRUE(df$x[i]==df$x[i-1])){
+         min_y <- min(df$y[i-1],df$y[i])
+         unwanted <- df[df$y== min_y & (df$x==df$x[i] | df$x==df$x[i-1]),]
+       } else{ unwanted <- data.frame(x=NA, y=NA)}
+         df <- setdiff(df, unwanted)
+       i <- i+1
+       }
+        if(length(unique(df$x))==length(df$x)) {
+          break
+        }
+      }
+
+
+     cc <- check_curve(df$x, df$y)$ctype
+     if (cc=="convex") {
+       model="constant"
+     } else {
+       if (cc=="concave") {
+         model="growth"
+       } else { model="mixed"}
+     }
+     
+     rmax <- list()
+     for (i in 2:nrow(df)) {
+       rmax[[i]] <- (df$y[i]-df$y[i-1])/(df$x[i]-df$x[i-1])
+     }
+     rmax <- max(do.call("rbind",rmax), na.rm=T)
+     model_data <- data.frame(model=model, rmax=1/rmax)
+     Ne_df <- data.frame(time=df$x, ne=df$y)
+    return(cbind(Ne_df, model_data))
+   }
+   
+   total_Ne_model <- modelNe_growth(total_Ne_df)
+   assign("total_Ne_model", total_Ne_model, envir = globalenv())
+   clusters_Ne_model <- lapply(clusters_Ne_df, modelNe_growth)
+  c_root_age <- list()
+  for (i in seq_along(clusters_Ne_model)) {
+    c_root_age[[i]] <- unique(subset(metadata$root_age, metadata$cluster_id == names(clusters_Ne_df)[i] & !is.na(metadata$cluster_id)))
+    clusters_Ne_model[[i]]$time = clusters_Ne_model[[i]]$time + c_root_age[[i]]
   }
   assign("clusters_Ne_model", clusters_Ne_model, envir = globalenv())
   
@@ -817,71 +958,71 @@ modelNe <- function() {
     calculateRe(x, conf.level = 0.95)}, mc.cores = numCores)
   assign("clusters_Re", clusters_Re, envir = globalenv())
 } # End modelNe function
-calculateRe <- function(Ne, conf.level=0.95) {
-  s <- 100 # sample size of 100
-#  psi <- rnorm(s, 0.038, 0.014) #Duration of infection around 14 days 
-  psi <- rnorm(s, 14, 5) #Duration of infection around 14 days -incubation period of 5 days
-#  psi <- rnorm(s, 9, 5) #Duration of infection around 14 days -incubation period of 5 days
-  Z=qnorm(0.5*(1 + conf.level))
-  Re <- list()
-  if (isTRUE(nrow(Ne) >2)) {
-    for (i in 2:nrow(Ne)) {
-      time = Ne$time[i-1]
-      Re.dist = sample(1+psi*(Ne$Ne[i]-Ne$Ne[i-1])/((Ne$time[i]-Ne$time[i-1])*Ne$Ne[i-1]),
-                       size=s, replace=F)
-      logRe = log(Re.dist)
-      SElogRe = sd(logRe)/sqrt(s) # standard deviation of 2, sample size of 10
-      LCL = exp(mean(logRe) - Z*SElogRe) 
-      UCL = exp(mean(logRe) + Z*SElogRe) 
-      Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")"))
+
+growthMetrics <- function(clusters, clusters_Ne_model, performance) {
+  
+  growthPeriod <- function(ne_model) {
+    max_ne <- max(ne_model$ne)
+    max_t <- ne_model$time[ne_model$ne==max_ne][1]
+    t_frac <- (max_t-min(ne_model$time))/(max(ne_model$time)-min(ne_model$time))
+    rmax <- ne_model$rmax[1]
+    
+#    t1 <- min(ne_model$time)
+#    t2 <- max(ne_model$time)
+#    ne1 <- min(ne_model$ne[ne_model$time == t1])
+#    ne2 <- max(ne_model$ne[ne_model$time == t2])
+#    r <- (ne2-ne1)/(t2-t1)
+    model <- ne_model$model[1]
+    growth_rate <- data.frame(t_frac=t_frac, rmax=rmax, model=model)
+    if (model=="growth") {
+      df <- ne_model[ne_model$time >= max_t,]
+      lin.fit <- lm(df$ne~df$time)
+      if (summary(lin.fit)$coefficients[2] <0 & summary(lin.fit)$coefficients[2,4] < 0.05) {
+        model="decay"
+      } else {model=model}
     }
-  } else {Re[[i-1]] <- NULL}
-  Re <- do.call("rbind",Re)
-}
-growthMetrics <- function(clusters, clusters_Ne_model) {
+    return(data.frame(t_frac=t_frac, rmax=rmax, model=model))
+    }
   
-  Ne_peak_t <- total_Ne_model$time[total_Ne_model$Ne==max(total_Ne_model$Ne)][1]
-  max_t <- max(total_Ne_model$time)
-  p_time_growth <- Ne_peak_t/max_t
-  Ne_growth <- total_Ne_model[total_Ne_model$time <= Ne_peak_t,]
-  Ne_lm <- lm(Ne~time, data=Ne_growth)
-  total_growth_rate <- coef(Ne_lm)[2]
+  total_Ne_growth <- growthPeriod(total_Ne_model)
+  cluster_Ne_growth <- mclapply(clusters_Ne_model, growthPeriod)
   
   
-  
+
   growth_criteria <- NULL
   ## Calculate slopes for Ne and ltt, and record R0
   for (i in seq_along(clusters)) {
-    cluster_state <- names(which.max(table(gsub(".+([A-Z])$", "\\1", clusters[[i]]$label))))
-    cluster_taxa = paste0(clusters[[i]]$label[clusters[[i]]$label!="NA"], collapse=",")
+    state <- dplyr::filter(performance, identified_taxa == paste(clusters[[i]]$label, sep=",", collapse=","))$state
+    identified_taxa = paste(clusters[[i]]$label, sep=",", collapse=",")
     cluster_size = length(clusters[[i]]$label)
     ## Find amount of time spent in growth phase (based on maximum)
-    Ne_peak_t <- clusters_Ne_model[[i]]$time[clusters_Ne_model[[i]]$Ne==max(clusters_Ne_model[[i]]$Ne)][1]
-    max_t <- max(clusters_Ne_model[[i]]$time)
-    p_time_growth <- Ne_peak_t/max_t
-    Ne_growth <- clusters_Ne_model[[i]][clusters_Ne_model[[i]]$time <= Ne_peak_t,]
-    ## Find growth rate
-    Ne_lm <- lm(Ne~time, data=Ne_growth)
-    growth_rate <- coef(Ne_lm)[2]
-    rel_growth_rate <- growth_rate/total_growth_rate
-    rife_metric <- p_time_growth*rel_growth_rate
+    model <- cluster_Ne_growth[[i]]$model
+    max_r <- cluster_Ne_growth[[i]]$rmax
+    rel_max_r <- max_r/total_Ne_growth$rmax
+    
+ #   r <- cluster_Ne_growth[[i]]$r
+#    rel_r <- r/total_Ne_growth$r
+    
+    t_frac <- cluster_Ne_growth[[i]]$t_frac
     ## Report whether growth occurred 
     mean_R0 <- clusters_Re[[i]]$mean_Re[1]
     lower_R0 <- as.numeric(gsub("\\((.+)\\,.+", "\\1", as.character(clusters_Re[[i]]$conf.int[1])[1]))
     upper_R0 <- as.numeric(gsub(".+\\,(.+)\\)", "\\1", as.character(clusters_Re[[i]]$conf.int[1])[1]))
     gamma <- clusters_gamma[[i]]
     growth_criteria <- rbind(growth_criteria, 
-                             data.frame(state = cluster_state,
-                                        taxa = cluster_taxa,
+                             data.frame(state = state,
+                                        identified_taxa=identified_taxa,
                                         size = cluster_size,
-                                        p_time_growth = p_time_growth,
-                                        growth_rate = growth_rate,
-                                        rel_growth_rate = rel_growth_rate,
+                                        model=model,
+                                        t_frac=t_frac,
+                                        max_r = max_r,
+                                        rel_max_r = rel_max_r,
+#                                        r = r,
+#                                        rel_r = rel_r,
                                         pybus_gamma = gamma,
                                         mean_R0 = mean_R0,
                                         lower_R0 = lower_R0,
                                         upper_R0 = upper_R0, 
-                                        rife_metric = rife_metric,
                                         dynamic=NA,
                                         priority=NA,
                                         stringsAsFactors = F))
@@ -889,27 +1030,60 @@ growthMetrics <- function(clusters, clusters_Ne_model) {
 
   # Label as growing, not growing, or dead according to ltt slope
   for (i in 1:nrow(growth_criteria)) {
-    if (isTRUE(growth_criteria$p_time_growth[i] == 1)){
-      growth_criteria$dynamic[i] <- "growth"
-    } else {
-    if (isTRUE(growth_criteria$p_time_growth[i] >= 0.5 & growth_criteria$p_time_growth[i] < 1)){
+    if (isTRUE(growth_criteria$model[i] == "constant")){
       growth_criteria$dynamic[i] <- "static"
     } else {
-      if (isTRUE(growth_criteria$p_time_growth[i] < 0.5)){
+      if (isTRUE(growth_criteria$model[i] == "mixed" | growth_criteria$model[i] == "growth")){
+        growth_criteria$dynamic[i] <- "growth"
+    } else {
+      if (isTRUE(growth_criteria$model[i] == "decay")){
         growth_criteria$dynamic[i] <- "decay"
-      } 
     }
     }
-    if (isTRUE(growth_criteria$rife_metric[i] >= 0.5)){
+    }
+    n <- length(unique(metadata$ID))/10000*100
+    if (isTRUE(growth_criteria$rel_max_r[i] > n)){
       growth_criteria$priority[i] <- "high priority"
     } else {
-      if (isTRUE(growth_criteria$rife_metric[i] < 0.5)){
+      if (isTRUE(growth_criteria$rel_max_r[i] <= n)){
         growth_criteria$priority[i] <- "low priority"
     }
     }
   }
-  return(growth_criteria)
+  performance <- merge(performance, growth_criteria, by=c("state", "identified_taxa"), all.x=T)
+  return(performance)
 }
+connectClust <- function(sub_tree, clusters) {
+  
+  cluster_data <- clusters
+  dup_cluster_data <- cluster_data
+  full_tree <- as_tibble(sub_tree)
+  
+  for (i in seq_along(cluster_data)) {
+    
+    for (j in seq_along(dup_cluster_data[-i])) {
+      dup_cluster_data[[j]]$birth_origin <- NA
+      #      dup_cluster_data[[j]]$birth_origin <- NA
+      ## If the parent of origin node of one cluster (found by referencing full tree) is a child node in one of the other clusters... 
+      if (isTRUE(tidytree::parent(full_tree, dup_cluster_data[[j]]$parent[1])$node %in% cluster_data[[i]]$node |
+                 ## Or if the parent of the parent of the origin node of one cluster (found by referencing full tree) is a child node in one of the other clusters... (meaning clusters are allowed to be separated by up to two branches)
+                 tidytree::parent(full_tree, dup_cluster_data[[j]]$parent[1])$parent %in% cluster_data[[i]]$node)) {
+        #        dup_cluster_data[[j]]$birth_origin == paste0("cluster_", cluster_data[[i]]$parent[1] )
+        dup_cluster_data[[j]]$birth_origin = paste0(names(cluster_data)[[i]])
+      } #End if statement
+    } # End for loop along duplicate list
+  } # End for loop along original list
+  return(dup_cluster_data)
+} #End connectClust function
+identifyBirths <- function(clusters, sub_tree, performance) {
+  clusters <- connectClust(sub_tree, clusters)
+  for (i in seq_along(clusters)) { ## Update performance
+    if(isTRUE(!is.na(clusters[[i]]$birth_origin[1]))) {
+      performance$birth[i] <- "birth"
+    } else {performance$birth[i] <-NA}
+  }
+  return(performance)
+} # End of function
 getContempTaxa <- function(sub_tree) {
   tip_heights <- NULL
   sub_tree <- as.phylo(sub_tree)
@@ -920,26 +1094,79 @@ getContempTaxa <- function(sub_tree) {
   #of the max time are still considered
   return(contemp_taxa)
 }
-connectClust <- function(sub_tree, clusters) {
+identifyDeaths <- function(clusters, sub_tree, performance) {
+  contemp_taxa <- getContempTaxa(sub_tree)
   
-  cluster_data <- clusters
-  dup_cluster_data <- cluster_data
-  full_tree <- as_tibble(sub_tree)
+  for (i in seq_along(clusters)) { ## Update performance
+    if (isTRUE(any(clusters[[i]]$label %in% contemp_taxa))) {
+      performance$death[i] <- NA
+    } else{performance$death[i] <- "death"} # End if-else statement
+  } # End for loop
+  return(performance)
+}
+quantifyR0perf <- function(performance, cluster_dynamics) {
+  performance$R0_diff<- NA
+  performance$R0_overlap <- NA
   
-  for (i in seq_along(cluster_data)) {
-    cluster_data[[i]]$birth_origin <- NA
-    for (j in seq_along(dup_cluster_data[-i])) {
-      ## If the parent of origin node of one cluster (found by referencing full tree) is a child node in one of the other clusters... 
-      if (isTRUE(tidytree::parent(full_tree, dup_cluster_data[[j]]$parent[1])$parent %in% cluster_data[[i]]$node |
-          ## Or if the parent of the parent of the origin node of one cluster (found by referencing full tree) is a child node in one of the other clusters... (meaning clusters are allowed to be separated by up to two branches)
-          tidytree::parent(full_tree, 
-                           tidytree::parent(full_tree, dup_cluster_data[[j]]$parent[1])$parent)$parent %in% cluster_data[[i]]$node)) {
-        cluster_data[[j]]$birth_origin == paste0("cluster_", cluster_data[[i]]$parent[1] )
-      } #End if statement
-    } # End for loop along duplicate list
-  } # End for loop along original list
-  return(cluster_data)
-} #End connectClust function
+  for (i in 1:nrow(performance)) {
+    for (j in 1:nrow(cluster_dynamics)) {
+      
+      # R0_diff
+      if (isTRUE(performance$state[i] == cluster_dynamics$state[j])) {
+        performance$R0_diff[i] <- abs(performance$mean_R0[i] - cluster_dynamics$mean_R0[j])
+      } else {NULL}
+      
+      # R0 intervals           
+      if (isTRUE(performance$state[i] == cluster_dynamics$state[j] &
+                 (performance$lower_R0[i] <= cluster_dynamics$lower_R0[j] &
+                  performance$upper_R0[i] >= cluster_dynamics$upper_R0[j]) |
+                 (performance$lower_R0[i] >= cluster_dynamics$lower_R0[j] &
+                  performance$upper_R0[i] <= cluster_dynamics$upper_R0[j]))){
+        performance$R0_overlap[i] <- "included"
+      } else {
+        if (isTRUE(performance$state[i] == cluster_dynamics$state[j] &
+                   (performance$lower_R0[i] <= cluster_dynamics$lower_R0[j] & 
+                    performance$upper_R0[i] >= cluster_dynamics$lower_R0[j]) |
+                   (performance$upper_R0[i] >= cluster_dynamics$upper_R0[j] &
+                    performance$lower_R0[i] <= cluster_dynamics$upper_R0[j]))){# If true cluster dynamic classification is contained within the reported cluster dynamic,
+          performance$R0_overlap[i] <- "overlapping"
+        } else {
+          if (isTRUE(is.na(performance$mean_R0[i]))) {
+            performance$R0_overlap[i] <- NA
+          } else {performance$R0_overlap[i] <- "non-overlapping"}
+        }
+      }
+    }
+  }
+  return(performance)
+} # End function
+classify <- function(performance,cluster_dynamics) { #Where x is performance and y is cluster_dynamics
+  x <- performance #Just easier for what follows
+  z <- cluster_dynamics # Just easier for what follows
+  x$dynamic_TF <- NA
+  x$birth_TF <- NA
+  #    x$death_TF <- NA
+  x$priority_TF <- NA
+  for (i in 1:nrow(x)) {
+    for (k in 1:nrow(z)) {
+      if (x$state[i] == z$state[k]) { # For clusters in both tables (identified true clusters)
+        x$dynamic_TF[i] <- if_else(isTRUE(x$dynamic[i] == z$dynamic[k] | pmatch(z$dynamic[k], x$dynamic[i]) ==1 |
+                                            (x$dynamic[i] == "static" & z$dynamic[k] == "background")), "TRUE", "FALSE")
+        x$birth_TF[i] <- if_else(isTRUE(x$birth[i] == z$birth[k] |x$birth[i] %!=na% z$birth[k]), "TRUE", "FALSE")
+        #         x$death_TF[i] <- if_else(isTRUE(x$death[i] == z$death[k] |x$death[i] %!=na% z$death[k]), "TRUE", "FALSE")
+        x$priority_TF[i] <- if_else(isTRUE((z$dynamic[k] == "background" & x$priority[i] == "low priority") |
+                                             (z$dynamic[k] != "background" & x$priority[i] == "high priority")), "TRUE", "FALSE")
+      } else {NULL}
+    } #End loop along z
+    if (isTRUE(is.na(x$identified_taxa[i]) | x$model[i]=="CNBD")) {
+      x$dynamic_TF[i] <- NA
+      x$birth_TF[i] <- NA
+      x$priority_TF[i] <- NA
+    }
+  } # End loop along x
+  return(x)
+} # End function
+
 
 ###########################################################################################################################
 
@@ -958,17 +1185,17 @@ cluster_dynamics <- true.cluster.dyn(conf.level=0.95)
 define.clades(sub_tree)
 
 print("Finding true clusters...")
-true_clusters <- find.true.clusters(family_tree, clades) %>%
-  merge.overlap.clust.true() %>%
-  list.filter(length(unlist(str_split(taxa, ','))) >= 6)
+# true_clusters <- find.true.clusters(family_tree, clades) %>%
+#   merge.overlap.clust.true() %>%
+#   list.filter(length(unlist(str_split(taxa, ','))) >= 6)
 ## Add test "A" clusters, which is a clade of sequences taken directly from the full transmission tree
-true_clusters <- add.test.clust(true_clusters)
-states_present <- lapply(true_clusters, function(x) {
-  (gsub(".+_([A-Z]).+", "\\1", x$taxa))
-})
-states_present <- data.frame(sim=opt$sim_index, state = do.call("rbind", states_present), stringsAsFactors = F) %>%
-  group_by(sim, state) %>%
-  dplyr::summarise(state_count = n())
+true_clusters <- add.test.clust()
+# states_present <- lapply(true_clusters, function(x) {
+#   (gsub(".+_([A-Z]).+", "\\1", x$taxa))
+# })
+# states_present <- data.frame(sim=opt$sim_index, state = do.call("rbind", states_present), stringsAsFactors = F) %>%
+#   group_by(sim, state) %>%
+#   dplyr::summarise(state_count = n())
 
 #######Pick clusters ##################################################################################
 write("Picking clusters based on user choice of algorithm....")
@@ -984,127 +1211,75 @@ if (opt$cluster == "b") {
   }
 }
 
-
-### Benchmarking ###################################################################################
-
-print("Benchmarking performance")
-performance <- benchmark(clusters, true_clusters)
-
-
-## Calculate growth metrics ##########################################################################
-print("Calculating Ne(t) and Re(t)...")
-modelNe()
-
-### Relative Ne ########################################################################################
-
-relative_Ne <- mclapply(clusters_Ne_model, function(x) {
-  Ne_merged <- merge(total_Ne_model, x, by="time", all.x=T)
-  Ne_merged$rel_Ne <- Ne_merged$Ne.y/Ne_merged$Ne.x
-  return(dplyr::select(Ne_merged, time, rel_Ne))
-}, mc.cores=numCores)
-
-## Populate growth metric table ########################################################################
-
-growth_criteria <- growthMetrics(clusters, clusters_Ne_model)
-
-
-## Classify births ######################################################################################
-
-clusters <- connectClust(sub_tree, clusters) # This needs to be the original clusters, rather than the
-## filled clusters (same for below)
-
-for (i in seq_along(clusters)) {
-  growth_criteria$birth <- NA
-  if(!is.na(clusters[[i]]$birth_origin[1])) {
-    growth_criteria$birth[i] <- "birth"
-  } else {NULL}
-}
-
-# ## Classify deaths ###################################################################################
-
-## Grab contemporaneous taxa to classify deaths
-contemp_taxa <- getContempTaxa(sub_tree)
-
-for (i in seq_along(clusters)) {
-  if (isTRUE(any(clusters[[i]]$label %in% contemp_taxa))) {
-    growth_criteria$death[i] <- NA
-  } else{growth_criteria$death[i] <- "death"} # End if-else statement
-} # End for loop
-
-## Now populate performance table based on classification ###############################################
-
-for (i in 1:nrow(growth_criteria)) {
-  for (j in 1:nrow(cluster_dynamics)) {
-    
-    # R0_diff
-    if (isTRUE(growth_criteria$state[i] == cluster_dynamics$state[j])) {
-    growth_criteria$R0_diff[i] <- abs(growth_criteria$mean_R0[i] - cluster_dynamics$mean_R0[j])
-    } else {NULL}
-    
-    # R0 intervals           
-    if (isTRUE(growth_criteria$state[i] == cluster_dynamics$state[j] &
-               (growth_criteria$lower_R0[i] <= cluster_dynamics$lower_R0[j] &
-               growth_criteria$upper_R0[i] >= cluster_dynamics$upper_R0[j]) |
-               (growth_criteria$lower_R0[i] >= cluster_dynamics$lower_R0[j] &
-                growth_criteria$upper_R0[i] <= cluster_dynamics$upper_R0[j]))){
-    growth_criteria$R0_overlap[i] <- "included"
-    } else {
-      if (isTRUE(growth_criteria$state[i] == cluster_dynamics$state[j] &
-               (growth_criteria$lower_R0[i] <= cluster_dynamics$lower_R0[j] & 
-               growth_criteria$upper_R0[i] >= cluster_dynamics$lower_R0[j]) |
-               (growth_criteria$upper_R0[i] >= cluster_dynamics$upper_R0[j] &
-               growth_criteria$lower_R0[i] <= cluster_dynamics$upper_R0[j]))){# If true cluster dynamic classification is contained within the reported cluster dynamic,
-      growth_criteria$R0_overlap[i] <- "overlapping"
-      } else {growth_criteria$R0_overlap[i] <- "non-overlapping"}
-    }
-  }
-}
-
-## Merge with performance metrics ###############################################
-`%!=na%` <- function(e1, e2) (is.na(e1) & is.na(e2))
-
-final_df <- NULL
-for (i in 1:nrow(growth_criteria)) {
-  for (j in 1:nrow(performance)) {
-    for (k in 1:nrow(cluster_dynamics)) {
-    if (isTRUE(growth_criteria$state[i] == performance$state[j] &
-        any(unlist(str_split(performance$taxa[j], ',')) %in% 
-            unlist(str_split(growth_criteria$taxa[i], ','))) &
-        performance$state[j] == cluster_dynamics$state[k])) {
-      state <- performance$state[j]
-      proportion <- performance$proportion[j]
-      taxa <- performance$taxa[j]
-      dynamic <- if_else(growth_criteria$dynamic[i] == cluster_dynamics$dynamic[k] |
-                           (growth_criteria$dynamic[i] == "static" &
-                           cluster_dynamics$dynamic[k] == "background"), "TRUE", "FALSE")
-      birth <- if_else(growth_criteria$birth[i] == cluster_dynamics$birth[k] |
-                         growth_criteria$birth[i] %!=na% cluster_dynamics$birth[k], "TRUE", "FALSE")
-      priority <- if_else((cluster_dynamics$dynamic[k] == "background" &
-                            growth_criteria$priority[i] == "low priority") |
-                            (cluster_dynamics$dynamic[k] != "background" &
-                               growth_criteria$priority[i] == "high priority"), "TRUE", "FALSE")
-      R0_diff <- growth_criteria$R0_diff[i]
-      R0_overlap <- growth_criteria$R0_overlap[i]
-
-    } else {
-      if (isTRUE(performance$proportion[j] == 0)) {
-      state <- performance$state[j]
-      proportion <- performance$proportion[j]
-      taxa <- performance$taxa[j]
-      dynamic <- NA
-      birth <- NA
-      priority <- NA
-      R0_diff <- NA
-      R0_overlap <- NA
-      }
-    }
-       final_df <- rbind(final_df,
-                        data.frame(state=state, proportion=proportion, taxa=taxa, dynamic=dynamic,
-                             birth=birth, priority=priority, R0_diff=R0_diff, R0_overlap=R0_overlap)) %>%
-        distinct()
-    }
-  }
-}
+## Do not continue if no clusters found ############################################################
+if (length(clusters)==0) {
+  print("No clusters detected. Saving null output...")
+  performance <- lapply(true_clusters, function(x) {
+    state <- names(which.max(table(gsub(".+\\_([A-Z])", "\\1", unlist(str_split(x$taxa, ','))))))
+    identified_taxa <- NA
+    proportion <- 0
+    additional <- NA
+    true_taxa <- x$taxa
+    size <- NA
+    model <- NA
+    t_frac <- NA
+    max_r <- NA
+    rel_max_r <- NA
+    pybus_gamma <- NA
+    mean_R0 <- NA
+    lower_R0 <- NA
+    upper_R0 <- NA
+    dynamic <- NA
+    priority <- NA
+    birth <- NA
+    death <- NA
+    R0_overlap <- NA
+    R0_diff <- NA
+    dynamic_TF <- NA
+    birth_TF <- NA
+    priority_TF <- NA
+    performance <- data.frame(state=state, identified_taxa=identified_taxa, proportion=proportion, additional=additional,
+                              true_taxa=true_taxa, size=size, model=model, t_frac=t_frac, max_r=max_r, rel_max_r=rel_max_r,
+                              pybus_gamma=pybus_gamma, mean_R0=mean_R0, lower_R0=lower_R0,
+                              upper_R0=upper_R0, dynamic=dynamic, priority=priority, birth=birth, death=death,
+                              R0_overlap=R0_overlap, R0_diff=R0_diff, dynamic_TF=dynamic_TF, birth_TF=birth_TF, priority_TF=priority_TF)
+    return(performance)
+  })
+  performance <- do.call(rbind, performance)
+  metadata <- NULL
+} else {
+  print("Benchmarking overall performance")
+  performance <- benchmark(clusters, true_clusters)
+  print("Calculating Ne(t) and Re(t)...")
+  modelEffective()
+  # ggplot(bind_rows(clusters_Ne_model, .id="df"), aes(x=time, y=Ne, colour=df)) +
+  #   geom_line()
+  
+  # relative_Ne <- mclapply(clusters_Ne_model, function(x) {
+  #   Ne_merged <- merge(total_Ne_model, x, by="time", all.x=T)
+  #   Ne_merged$rel_Ne <- Ne_merged$Ne.y/Ne_merged$Ne.x
+  #   return(dplyr::select(Ne_merged, time, rel_Ne))
+  # }, mc.cores=numCores)
+  # 
+  # ggplot(bind_rows(relative_Ne, .id="df"), aes(x=time, y=rel_Ne, colour=df)) +
+  #   geom_line()
+  
+  print("Calculating growth metrics...")
+  performance <- growthMetrics(clusters, clusters_Ne_model, performance)
+  
+  print("Identifying births...")
+  performance <- identifyBirths(clusters, sub_tree, performance)
+  
+  print("Identifying deaths...")
+  performance <- identifyDeaths(clusters, sub_tree, performance)
+  
+  print("Quantifying R0 estimation performance...")
+  performance <- quantifyR0perf(performance, cluster_dynamics)
+  
+  print("Classifying correct/incorrect inferences...")
+  performance <- classify(performance, cluster_dynamics)
+  
+}# end if-else function for if zero clusters found vs actual clusters found
 
 
 ## Save performance metrics for each run ################################################################
@@ -1119,16 +1294,48 @@ if (opt$leaves == "") {
              opt$threshold))
 }
 
-saveRDS(clusters, file=paste0("clusters_", opt$sim_index, ".rds"))
-saveRDS(true_clusters, file=paste0("true_clusters_", opt$sim_index, ".rds"))
+print("Saving results...")
+#saveRDS(clusters, file=paste0("clusters_", opt$sim_index, ".rds"))
+#saveRDS(true_clusters, file=paste0("true_clusters_", opt$sim_index, ".rds"))
 
-growth_criteria$sim <- opt$sim_index
-final_df$sim <- opt$sim_index
 
-write.table(states_present, file=paste0('num_true_clusters_', opt$sim_index, ".tab"), sep='\t', quote=F, row.names = F)
-write.table(growth_criteria, file=paste0('sim_growth_stats_', opt$sim_index, ".tab"), sep='\t', quote=F, row.names = F) 
-write.table(final_df, file=paste0('sim_performance_', opt$sim_index, ".tab"), sep='\t', quote=F, row.names=F) 
+performance$sim <- opt$sim_index
+metadata$sim <- opt$sim_index
+
+#write.table(states_present, file=paste0('num_true_clusters_', opt$sim_index, ".tab"), sep='\t', quote=F, row.names = F)
+write.table(metadata, file=paste0('metadata_', opt$sim_index, ".tab"), sep='\t', quote=F, row.names = F)
+write.table(performance, file=paste0('sim_performance_', opt$sim_index, ".tab"), sep='\t', quote=F, row.names=F) 
 
 #########################################################################################
+## Tree export
+# gg_tree <- ggtree(tree, mrsd=)
+# 
+# 
+# exportTree <- function(time_tree, cluster_data) {
+#   t.tbl <- as_tibble(time_tree)
+#   t.tbl <- cbind(t.tbl, gg_tree$data$x)
+#   names(t.tbl)[5] = "dates"
+#   t.tbl$cluster_id <- ""
+#   for (i in seq_along(cluster_data)) {
+#     for (j in seq_along(t.tbl$node)) {
+#       if (t.tbl$node[j] %in% cluster_data[[i]]$node) {
+#         t.tbl$cluster_id[j] = names(cluster_data)[i]
+#       } else{t.tbl$node[j] = t.tbl$node[j]}
+#     }
+#   }
+#   
+#   t.tbl$dates <- date_decimal(t.tbl$dates)
+#   t.tbl$dates <- as.Date(t.tbl$dates)
+#   t.tbl$label <- paste(t.tbl$label, t.tbl$dates, sep="|") # Needed for nextstrain, but ignoring for now
+#   class(t.tbl) = c("tbl_tree", class(t.tbl))
+#   
+#   t2 <- as.treedata(t.tbl)
+#   return(t2)
+# }
+# exported_tree <- exportTree(time_tree, cluster_data)
+# write.beast(exported_tree, "tree_data.tree")
+# 
+# rt1 <- Sys.time()
+# rt1-rt0
 
 
