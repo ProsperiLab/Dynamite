@@ -1,0 +1,875 @@
+#NEXUS
+[R-package treeio, Tue Dec 15 11:23:36 2020]
+
+BEGIN TAXA;
+	DIMENSIONS NTAX = 431;
+	TAXLABELS
+		S-15_A
+		S-46_A
+		S-75_A
+		S-89_A
+		S-112_A
+		S-113_A
+		S-155_A
+		S-244_A
+		S-247_A
+		S-269_A
+		S-278_A
+		S-287_A
+		S-288_A
+		S-303_A
+		S-305_A
+		S-312_A
+		S-318_A
+		S-362_A
+		S-363_A
+		S-364_A
+		S-382_A
+		S-422_A
+		S-443_A
+		S-448_A
+		S-455_A
+		S-476_A
+		S-533_G
+		S-538_A
+		S-578_G
+		S-583_A
+		S-625_A
+		S-633_A
+		S-645_A
+		S-745_A
+		S-762_A
+		S-784_A
+		S-804_A
+		S-811_A
+		S-832_A
+		S-892_A
+		S-922_A
+		S-947_A
+		S-958_A
+		S-1034_G
+		S-1035_G
+		S-1039_A
+		S-1055_A
+		S-1108_H
+		S-1115_G
+		S-1168_G
+		S-1188_A
+		S-1199_A
+		S-1200_A
+		S-1221_A
+		S-1279_A
+		S-1322_G
+		S-1325_A
+		S-1342_A
+		S-1416_B
+		S-1437_A
+		S-1457_G
+		S-1491_B
+		S-1589_A
+		S-1660_G
+		S-1686_A
+		S-1725_C
+		S-1743_A
+		S-1753_G
+		S-1795_A
+		S-1830_A
+		S-1836_A
+		S-1886_A
+		S-1889_A
+		S-1943_A
+		S-1947_G
+		S-1951_H
+		S-1958_A
+		S-1983_A
+		S-2026_A
+		S-2052_A
+		S-2081_A
+		S-2092_A
+		S-2125_A
+		S-2185_A
+		S-2195_A
+		S-2196_A
+		S-2209_A
+		S-2243_A
+		S-2274_G
+		S-2374_H
+		S-2378_B
+		S-2480_A
+		S-2510_G
+		S-2524_A
+		S-2538_A
+		S-2539_A
+		S-2565_A
+		S-2568_A
+		S-2575_H
+		S-2629_D
+		S-2647_H
+		S-2656_A
+		S-2673_A
+		S-2744_G
+		S-2748_A
+		S-2775_A
+		S-2790_A
+		S-2800_C
+		S-2812_E
+		S-2839_A
+		S-2866_H
+		S-2875_A
+		S-2877_H
+		S-2910_H
+		S-2921_H
+		S-2933_G
+		S-2943_B
+		S-2961_A
+		S-2978_A
+		S-3011_A
+		S-3037_A
+		S-3096_A
+		S-3097_A
+		S-3111_A
+		S-3121_A
+		S-3173_H
+		S-3209_A
+		S-3219_A
+		S-3239_A
+		S-3341_A
+		S-3400_A
+		S-3402_A
+		S-3430_A
+		S-3434_A
+		S-3440_H
+		S-3463_A
+		S-3487_H
+		S-3497_H
+		S-3520_A
+		S-3528_H
+		S-3533_G
+		S-3603_A
+		S-3610_A
+		S-3615_I
+		S-3664_H
+		S-3737_A
+		S-3761_H
+		S-3763_B
+		S-3764_A
+		S-3796_A
+		S-3821_A
+		S-3838_A
+		S-3843_A
+		S-3878_A
+		S-3889_A
+		S-3923_A
+		S-3978_A
+		S-3997_B
+		S-4007_A
+		S-4013_A
+		S-4014_H
+		S-4016_H
+		S-4068_I
+		S-4069_H
+		S-4075_C
+		S-4104_A
+		S-4119_A
+		S-4130_B
+		S-4200_A
+		S-4203_A
+		S-4212_A
+		S-4223_A
+		S-4237_A
+		S-4257_D
+		S-4285_H
+		S-4297_A
+		S-4300_D
+		S-4351_A
+		S-4365_H
+		S-4366_H
+		S-4378_A
+		S-4409_H
+		S-4427_A
+		S-4541_A
+		S-4544_A
+		S-4554_A
+		S-4558_A
+		S-4580_A
+		S-4678_A
+		S-4706_A
+		S-4736_G
+		S-4750_A
+		S-4775_H
+		S-4801_A
+		S-4802_C
+		S-4839_H
+		S-4984_A
+		S-4998_A
+		S-5049_A
+		S-5085_A
+		S-5105_H
+		S-5118_H
+		S-5234_G
+		S-5243_A
+		S-5259_B
+		S-5272_D
+		S-5297_G
+		S-5306_A
+		S-5319_A
+		S-5351_H
+		S-5376_H
+		S-5422_C
+		S-5425_A
+		S-5442_H
+		S-5452_A
+		S-5493_B
+		S-5639_A
+		S-5677_H
+		S-5700_H
+		S-5738_A
+		S-5803_H
+		S-5814_A
+		S-5823_H
+		S-5865_C
+		S-5866_A
+		S-5897_A
+		S-5911_A
+		S-5920_A
+		S-5927_H
+		S-5960_H
+		S-6010_D
+		S-6033_A
+		S-6037_H
+		S-6088_C
+		S-6191_H
+		S-6228_C
+		S-6230_A
+		S-6240_A
+		S-6270_A
+		S-6341_A
+		S-6358_B
+		S-6359_B
+		S-6360_H
+		S-6391_A
+		S-6399_G
+		S-6438_H
+		S-6439_H
+		S-6473_G
+		S-6477_A
+		S-6486_H
+		S-6488_C
+		S-6491_E
+		S-6492_E
+		S-6493_E
+		S-6536_A
+		S-6552_A
+		S-6656_H
+		S-6659_H
+		S-6666_H
+		S-6690_A
+		S-6693_A
+		S-6736_C
+		S-6745_A
+		S-6832_H
+		S-6834_B
+		S-6928_A
+		S-6933_D
+		S-6949_H
+		S-6981_G
+		S-7083_G
+		S-7114_H
+		S-7122_A
+		S-7151_A
+		S-7156_E
+		S-7179_I
+		S-7185_A
+		S-7199_H
+		S-7242_A
+		S-7267_H
+		S-7300_B
+		S-7311_G
+		S-7338_A
+		S-7347_A
+		S-7357_C
+		S-7382_H
+		S-7421_A
+		S-7435_C
+		S-7445_A
+		S-7476_H
+		S-7493_A
+		S-7512_H
+		S-7522_A
+		S-7534_C
+		S-7537_B
+		S-7546_C
+		S-7556_D
+		S-7557_D
+		S-7586_H
+		S-7612_A
+		S-7675_A
+		S-7679_G
+		S-7696_A
+		S-7698_H
+		S-7703_A
+		S-7737_A
+		S-7744_H
+		S-7780_D
+		S-7785_C
+		S-7787_A
+		S-7795_A
+		S-7821_G
+		S-7884_A
+		S-7928_D
+		S-7980_C
+		S-7984_A
+		S-8006_H
+		S-8026_G
+		S-8028_A
+		S-8126_A
+		S-8182_A
+		S-8212_H
+		S-8222_I
+		S-8244_A
+		S-8249_H
+		S-8265_H
+		S-8295_A
+		S-8322_C
+		S-8337_A
+		S-8391_B
+		S-8394_D
+		S-8465_A
+		S-8560_A
+		S-8562_E
+		S-8572_A
+		S-8596_A
+		S-8616_A
+		S-8705_H
+		S-8717_A
+		S-8721_H
+		S-8739_A
+		S-8782_B
+		S-8783_B
+		S-8834_H
+		S-8837_H
+		S-8838_H
+		S-8853_A
+		S-8881_E
+		S-8901_A
+		S-8939_A
+		S-8944_H
+		S-9015_A
+		S-9102_H
+		S-9111_A
+		S-9177_A
+		S-9179_H
+		S-9219_A
+		S-9236_A
+		S-9239_A
+		S-9242_H
+		S-9320_B
+		S-9321_B
+		S-9351_D
+		S-9372_H
+		S-9420_H
+		S-9450_H
+		S-9487_C
+		S-9488_C
+		S-9494_H
+		S-9497_A
+		S-9505_C
+		S-9550_A
+		S-9584_H
+		S-9601_H
+		S-9624_A
+		S-9686_A
+		S-9735_H
+		S-9737_H
+		S-9738_H
+		S-9761_C
+		S-10000_A
+		S-10001_A
+		S-10035_H
+		S-10047_C
+		S-10057_H
+		S-10092_C
+		S-10095_A
+		S-10114_C
+		S-10115_H
+		S-10147_A
+		S-10150_H
+		S-10155_I
+		S-10156_I
+		S-10157_I
+		S-10161_A
+		S-10180_A
+		S-10185_C
+		S-10187_H
+		S-10249_H
+		S-10262_A
+		S-10272_A
+		S-10281_A
+		S-10312_C
+		S-10332_B
+		S-10365_D
+		S-10370_H
+		S-10480_A
+		S-10523_H
+		S-10547_C
+		S-10548_C
+		S-10576_H
+		S-10593_A
+		S-10719_H
+		S-10835_A
+		S-10892_H
+		S-10893_H
+		S-10903_H
+		S-10912_A
+		S-10928_A
+		S-10990_H
+		S-11005_H
+		S-11043_H
+		S-9785_A
+		S-9825_B
+		S-9873_H
+		S-9875_H
+		S-9876_H
+		S-9910_C
+		S-9911_C
+		S-9912_C
+		S-9916_E
+		S-9929_H
+	;
+END;
+BEGIN TREES;
+	TRANSLATE
+		1	S-15_A,
+		2	S-46_A,
+		3	S-75_A,
+		4	S-89_A,
+		5	S-112_A,
+		6	S-113_A,
+		7	S-155_A,
+		8	S-244_A,
+		9	S-247_A,
+		10	S-269_A,
+		11	S-278_A,
+		12	S-287_A,
+		13	S-288_A,
+		14	S-303_A,
+		15	S-305_A,
+		16	S-312_A,
+		17	S-318_A,
+		18	S-362_A,
+		19	S-363_A,
+		20	S-364_A,
+		21	S-382_A,
+		22	S-422_A,
+		23	S-443_A,
+		24	S-448_A,
+		25	S-455_A,
+		26	S-476_A,
+		27	S-533_G,
+		28	S-538_A,
+		29	S-578_G,
+		30	S-583_A,
+		31	S-625_A,
+		32	S-633_A,
+		33	S-645_A,
+		34	S-745_A,
+		35	S-762_A,
+		36	S-784_A,
+		37	S-804_A,
+		38	S-811_A,
+		39	S-832_A,
+		40	S-892_A,
+		41	S-922_A,
+		42	S-947_A,
+		43	S-958_A,
+		44	S-1034_G,
+		45	S-1035_G,
+		46	S-1039_A,
+		47	S-1055_A,
+		48	S-1108_H,
+		49	S-1115_G,
+		50	S-1168_G,
+		51	S-1188_A,
+		52	S-1199_A,
+		53	S-1200_A,
+		54	S-1221_A,
+		55	S-1279_A,
+		56	S-1322_G,
+		57	S-1325_A,
+		58	S-1342_A,
+		59	S-1416_B,
+		60	S-1437_A,
+		61	S-1457_G,
+		62	S-1491_B,
+		63	S-1589_A,
+		64	S-1660_G,
+		65	S-1686_A,
+		66	S-1725_C,
+		67	S-1743_A,
+		68	S-1753_G,
+		69	S-1795_A,
+		70	S-1830_A,
+		71	S-1836_A,
+		72	S-1886_A,
+		73	S-1889_A,
+		74	S-1943_A,
+		75	S-1947_G,
+		76	S-1951_H,
+		77	S-1958_A,
+		78	S-1983_A,
+		79	S-2026_A,
+		80	S-2052_A,
+		81	S-2081_A,
+		82	S-2092_A,
+		83	S-2125_A,
+		84	S-2185_A,
+		85	S-2195_A,
+		86	S-2196_A,
+		87	S-2209_A,
+		88	S-2243_A,
+		89	S-2274_G,
+		90	S-2374_H,
+		91	S-2378_B,
+		92	S-2480_A,
+		93	S-2510_G,
+		94	S-2524_A,
+		95	S-2538_A,
+		96	S-2539_A,
+		97	S-2565_A,
+		98	S-2568_A,
+		99	S-2575_H,
+		100	S-2629_D,
+		101	S-2647_H,
+		102	S-2656_A,
+		103	S-2673_A,
+		104	S-2744_G,
+		105	S-2748_A,
+		106	S-2775_A,
+		107	S-2790_A,
+		108	S-2800_C,
+		109	S-2812_E,
+		110	S-2839_A,
+		111	S-2866_H,
+		112	S-2875_A,
+		113	S-2877_H,
+		114	S-2910_H,
+		115	S-2921_H,
+		116	S-2933_G,
+		117	S-2943_B,
+		118	S-2961_A,
+		119	S-2978_A,
+		120	S-3011_A,
+		121	S-3037_A,
+		122	S-3096_A,
+		123	S-3097_A,
+		124	S-3111_A,
+		125	S-3121_A,
+		126	S-3173_H,
+		127	S-3209_A,
+		128	S-3219_A,
+		129	S-3239_A,
+		130	S-3341_A,
+		131	S-3400_A,
+		132	S-3402_A,
+		133	S-3430_A,
+		134	S-3434_A,
+		135	S-3440_H,
+		136	S-3463_A,
+		137	S-3487_H,
+		138	S-3497_H,
+		139	S-3520_A,
+		140	S-3528_H,
+		141	S-3533_G,
+		142	S-3603_A,
+		143	S-3610_A,
+		144	S-3615_I,
+		145	S-3664_H,
+		146	S-3737_A,
+		147	S-3761_H,
+		148	S-3763_B,
+		149	S-3764_A,
+		150	S-3796_A,
+		151	S-3821_A,
+		152	S-3838_A,
+		153	S-3843_A,
+		154	S-3878_A,
+		155	S-3889_A,
+		156	S-3923_A,
+		157	S-3978_A,
+		158	S-3997_B,
+		159	S-4007_A,
+		160	S-4013_A,
+		161	S-4014_H,
+		162	S-4016_H,
+		163	S-4068_I,
+		164	S-4069_H,
+		165	S-4075_C,
+		166	S-4104_A,
+		167	S-4119_A,
+		168	S-4130_B,
+		169	S-4200_A,
+		170	S-4203_A,
+		171	S-4212_A,
+		172	S-4223_A,
+		173	S-4237_A,
+		174	S-4257_D,
+		175	S-4285_H,
+		176	S-4297_A,
+		177	S-4300_D,
+		178	S-4351_A,
+		179	S-4365_H,
+		180	S-4366_H,
+		181	S-4378_A,
+		182	S-4409_H,
+		183	S-4427_A,
+		184	S-4541_A,
+		185	S-4544_A,
+		186	S-4554_A,
+		187	S-4558_A,
+		188	S-4580_A,
+		189	S-4678_A,
+		190	S-4706_A,
+		191	S-4736_G,
+		192	S-4750_A,
+		193	S-4775_H,
+		194	S-4801_A,
+		195	S-4802_C,
+		196	S-4839_H,
+		197	S-4984_A,
+		198	S-4998_A,
+		199	S-5049_A,
+		200	S-5085_A,
+		201	S-5105_H,
+		202	S-5118_H,
+		203	S-5234_G,
+		204	S-5243_A,
+		205	S-5259_B,
+		206	S-5272_D,
+		207	S-5297_G,
+		208	S-5306_A,
+		209	S-5319_A,
+		210	S-5351_H,
+		211	S-5376_H,
+		212	S-5422_C,
+		213	S-5425_A,
+		214	S-5442_H,
+		215	S-5452_A,
+		216	S-5493_B,
+		217	S-5639_A,
+		218	S-5677_H,
+		219	S-5700_H,
+		220	S-5738_A,
+		221	S-5803_H,
+		222	S-5814_A,
+		223	S-5823_H,
+		224	S-5865_C,
+		225	S-5866_A,
+		226	S-5897_A,
+		227	S-5911_A,
+		228	S-5920_A,
+		229	S-5927_H,
+		230	S-5960_H,
+		231	S-6010_D,
+		232	S-6033_A,
+		233	S-6037_H,
+		234	S-6088_C,
+		235	S-6191_H,
+		236	S-6228_C,
+		237	S-6230_A,
+		238	S-6240_A,
+		239	S-6270_A,
+		240	S-6341_A,
+		241	S-6358_B,
+		242	S-6359_B,
+		243	S-6360_H,
+		244	S-6391_A,
+		245	S-6399_G,
+		246	S-6438_H,
+		247	S-6439_H,
+		248	S-6473_G,
+		249	S-6477_A,
+		250	S-6486_H,
+		251	S-6488_C,
+		252	S-6491_E,
+		253	S-6492_E,
+		254	S-6493_E,
+		255	S-6536_A,
+		256	S-6552_A,
+		257	S-6656_H,
+		258	S-6659_H,
+		259	S-6666_H,
+		260	S-6690_A,
+		261	S-6693_A,
+		262	S-6736_C,
+		263	S-6745_A,
+		264	S-6832_H,
+		265	S-6834_B,
+		266	S-6928_A,
+		267	S-6933_D,
+		268	S-6949_H,
+		269	S-6981_G,
+		270	S-7083_G,
+		271	S-7114_H,
+		272	S-7122_A,
+		273	S-7151_A,
+		274	S-7156_E,
+		275	S-7179_I,
+		276	S-7185_A,
+		277	S-7199_H,
+		278	S-7242_A,
+		279	S-7267_H,
+		280	S-7300_B,
+		281	S-7311_G,
+		282	S-7338_A,
+		283	S-7347_A,
+		284	S-7357_C,
+		285	S-7382_H,
+		286	S-7421_A,
+		287	S-7435_C,
+		288	S-7445_A,
+		289	S-7476_H,
+		290	S-7493_A,
+		291	S-7512_H,
+		292	S-7522_A,
+		293	S-7534_C,
+		294	S-7537_B,
+		295	S-7546_C,
+		296	S-7556_D,
+		297	S-7557_D,
+		298	S-7586_H,
+		299	S-7612_A,
+		300	S-7675_A,
+		301	S-7679_G,
+		302	S-7696_A,
+		303	S-7698_H,
+		304	S-7703_A,
+		305	S-7737_A,
+		306	S-7744_H,
+		307	S-7780_D,
+		308	S-7785_C,
+		309	S-7787_A,
+		310	S-7795_A,
+		311	S-7821_G,
+		312	S-7884_A,
+		313	S-7928_D,
+		314	S-7980_C,
+		315	S-7984_A,
+		316	S-8006_H,
+		317	S-8026_G,
+		318	S-8028_A,
+		319	S-8126_A,
+		320	S-8182_A,
+		321	S-8212_H,
+		322	S-8222_I,
+		323	S-8244_A,
+		324	S-8249_H,
+		325	S-8265_H,
+		326	S-8295_A,
+		327	S-8322_C,
+		328	S-8337_A,
+		329	S-8391_B,
+		330	S-8394_D,
+		331	S-8465_A,
+		332	S-8560_A,
+		333	S-8562_E,
+		334	S-8572_A,
+		335	S-8596_A,
+		336	S-8616_A,
+		337	S-8705_H,
+		338	S-8717_A,
+		339	S-8721_H,
+		340	S-8739_A,
+		341	S-8782_B,
+		342	S-8783_B,
+		343	S-8834_H,
+		344	S-8837_H,
+		345	S-8838_H,
+		346	S-8853_A,
+		347	S-8881_E,
+		348	S-8901_A,
+		349	S-8939_A,
+		350	S-8944_H,
+		351	S-9015_A,
+		352	S-9102_H,
+		353	S-9111_A,
+		354	S-9177_A,
+		355	S-9179_H,
+		356	S-9219_A,
+		357	S-9236_A,
+		358	S-9239_A,
+		359	S-9242_H,
+		360	S-9320_B,
+		361	S-9321_B,
+		362	S-9351_D,
+		363	S-9372_H,
+		364	S-9420_H,
+		365	S-9450_H,
+		366	S-9487_C,
+		367	S-9488_C,
+		368	S-9494_H,
+		369	S-9497_A,
+		370	S-9505_C,
+		371	S-9550_A,
+		372	S-9584_H,
+		373	S-9601_H,
+		374	S-9624_A,
+		375	S-9686_A,
+		376	S-9735_H,
+		377	S-9737_H,
+		378	S-9738_H,
+		379	S-9761_C,
+		380	S-10000_A,
+		381	S-10001_A,
+		382	S-10035_H,
+		383	S-10047_C,
+		384	S-10057_H,
+		385	S-10092_C,
+		386	S-10095_A,
+		387	S-10114_C,
+		388	S-10115_H,
+		389	S-10147_A,
+		390	S-10150_H,
+		391	S-10155_I,
+		392	S-10156_I,
+		393	S-10157_I,
+		394	S-10161_A,
+		395	S-10180_A,
+		396	S-10185_C,
+		397	S-10187_H,
+		398	S-10249_H,
+		399	S-10262_A,
+		400	S-10272_A,
+		401	S-10281_A,
+		402	S-10312_C,
+		403	S-10332_B,
+		404	S-10365_D,
+		405	S-10370_H,
+		406	S-10480_A,
+		407	S-10523_H,
+		408	S-10547_C,
+		409	S-10548_C,
+		410	S-10576_H,
+		411	S-10593_A,
+		412	S-10719_H,
+		413	S-10835_A,
+		414	S-10892_H,
+		415	S-10893_H,
+		416	S-10903_H,
+		417	S-10912_A,
+		418	S-10928_A,
+		419	S-10990_H,
+		420	S-11005_H,
+		421	S-11043_H,
+		422	S-9785_A,
+		423	S-9825_B,
+		424	S-9873_H,
+		425	S-9875_H,
+		426	S-9876_H,
+		427	S-9910_C,
+		428	S-9911_C,
+		429	S-9912_C,
+		430	S-9916_E,
+		431	S-9929_H
+	;
+	TREE * UNTITLED = [&R] ((((((((22[&host=S-422,state=A,time.parent=86,time=96]:20,(149[&host=S-3764,state=A,time.parent=114,time=119]:36,(353[&host=S-9111,state=A,time.parent=118,time=119]:27,(72[&host=S-1886,state=A,time.parent=116,time=119]:22,(98[&host=S-2568,state=A,time.parent=106,time=119]:13,354[&host=S-9177,state=A,time.parent=118,time=119]:13)S-1370_4199_A[&host=S-1370,state=A,time.parent=104,time=106]:9)S-733_2219_A[&host=S-733,state=A,time.parent=92,time=97]:5)S-380_1132_A[&host=S-380,state=A,time.parent=85,time=92]:9)S-179_523_A[&host=S-179,state=A,time.parent=76,time=83]:7)S-120_329_A[&host=S-120,state=A,time.parent=70,time=76]:6,(((27[&host=S-533,state=G,time.parent=103,time=104]:15,(64[&host=S-1660,state=G,time.parent=108,time=116]:26,(45[&host=S-1035,state=G,time.parent=96,time=108]:12,((56[&host=S-1322,state=G,time.parent=99,time=112]:13,(61[&host=S-1457,state=G,time.parent=100,time=113]:13,(68[&host=S-1753,state=G,time.parent=102,time=119]:17,((29[&host=S-578,state=G,time.parent=107,time=108]:1,(116[&host=S-2933,state=G,time.parent=117,time=119]:2,317[&host=S-8026,state=G,time.parent=117,time=119]:2)S-2933_9156_G[&host=S-2933,state=G,time.parent=107,time=117]:10)S-578_1738_G[&host=S-578,state=G,time.parent=103,time=107]:4,(75[&host=S-1947,state=G,time.parent=109,time=119]:10,141[&host=S-3533,state=G,time.parent=109,time=119]:10)S-1947_6027_G[&host=S-1947,state=G,time.parent=103,time=109]:6)S-578_1737_G[&host=S-578,state=G,time.parent=102,time=103]:1)S-578_1736_G[&host=S-578,state=G,time.parent=100,time=102]:2)S-578_1735_G[&host=S-578,state=G,time.parent=99,time=100]:1)S-578_1734_G[&host=S-578,state=G,time.parent=97,time=99]:2,((49[&host=S-1115,state=G,time.parent=107,time=112]:5,(207[&host=S-5297,state=G,time.parent=113,time=119]:6,(104[&host=S-2744,state=G,time.parent=115,time=118]:3,248[&host=S-6473,state=G,time.parent=115,time=119]:4)S-2744_8568_G[&host=S-2744,state=G,time.parent=113,time=115]:2)S-2744_8567_G[&host=S-2744,state=G,time.parent=107,time=113]:6)S-1115_3377_G[&host=S-1115,state=G,time.parent=106,time=107]:1,(191[&host=S-4736,state=G,time.parent=112,time=119]:7,((93[&host=S-2510,state=G,time.parent=115,time=116]:1,245[&host=S-6399,state=G,time.parent=115,time=119]:4)S-2510_7836_G[&host=S-2510,state=G,time.parent=113,time=115]:2,(203[&host=S-5234,state=G,time.parent=116,time=119]:3,301[&host=S-7679,state=G,time.parent=116,time=119]:3)S-5234_14174_G[&host=S-5234,state=G,time.parent=113,time=116]:3)S-2510_7835_G[&host=S-2510,state=G,time.parent=112,time=113]:1)S-2510_7834_G[&host=S-2510,state=G,time.parent=106,time=112]:6)S-1115_3376_G[&host=S-1115,state=G,time.parent=97,time=106]:9)S-578_1733_G[&host=S-578,state=G,time.parent=96,time=97]:1,(44[&host=S-1034,state=G,time.parent=105,time=110]:5,(269[&host=S-6981,state=G,time.parent=116,time=119]:3,(89[&host=S-2274,state=G,time.parent=117,time=119]:2,311[&host=S-7821,state=G,time.parent=117,time=119]:2)S-2274_7068_G[&host=S-2274,state=G,time.parent=116,time=117]:1)S-2274_7067_G[&host=S-2274,state=G,time.parent=105,time=116]:11)S-1034_3063_G[&host=S-1034,state=G,time.parent=96,time=105]:9)S-578_1732_G[&host=S-578,state=G,time.parent=94,time=96]:6)S-210_631_G[&host=S-210,state=G,time.parent=89,time=90]:1)S-210_630_G[&host=S-210,state=G,time.parent=88,time=89]:4,(50[&host=S-1168,state=G,time.parent=110,time=115]:24,270[&host=S-7083,state=G,time.parent=116,time=119]:28)S-391_1167_G[&host=S-391,state=G,time.parent=85,time=91]:6)S-210_627_G[&host=S-210,state=G,time.parent=78,time=85]:7,(332[&host=S-8560,state=A,time.parent=117,time=119]:32,(232[&host=S-6033,state=A,time.parent=114,time=119]:31,(315[&host=S-7984,state=A,time.parent=117,time=119]:28,(110[&host=S-2839,state=A,time.parent=107,time=119]:20,283[&host=S-7347,state=A,time.parent=116,time=119]:20)S-686_2076_A[&host=S-686,state=A,time.parent=91,time=99]:8)S-534_1584_A[&host=S-534,state=A,time.parent=89,time=91]:3)S-211_636_A[&host=S-211,state=A,time.parent=87,time=88]:1)S-211_635_A[&host=S-211,state=A,time.parent=78,time=87]:9)S-119_327_A[&host=S-119,state=A,time.parent=70,time=78]:8)S-79_218_A[&host=S-79,state=A,time.parent=68,time=70]:2,(318[&host=S-8028,state=A,time.parent=117,time=119]:21,(82[&host=S-2092,state=A,time.parent=104,time=117]:13,(194[&host=S-4801,state=A,time.parent=115,time=119]:7,273[&host=S-7151,state=A,time.parent=116,time=119]:7)S-2796_8713_A[&host=S-2796,state=A,time.parent=107,time=112]:8)S-1257_3837_A[&host=S-1257,state=A,time.parent=98,time=104]:6)S-828_2515_A[&host=S-828,state=A,time.parent=94,time=98]:30)S-79_217_A[&host=S-79,state=A,time.parent=65,time=68]:20,(((417[&host=S-10912,state=A,time.parent=119,time=119]:51,(281[&host=S-7311,state=G,time.parent=116,time=119]:47,(189[&host=S-4678,state=A,time.parent=118,time=119]:37,((200[&host=S-5085,state=A,time.parent=113,time=119]:6,266[&host=S-6928,state=A,time.parent=116,time=119]:6)S-1996_6198_A[&host=S-1996,state=A,time.parent=103,time=113]:30,(17[&host=S-318,state=A,time.parent=93,time=96]:4,69[&host=S-1795,state=A,time.parent=112,time=114]:22)S-318_951_A[&host=S-318,state=A,time.parent=91,time=92]:9)S-137_385_A[&host=S-137,state=A,time.parent=82,time=83]:1)S-137_384_A[&host=S-137,state=A,time.parent=72,time=82]:10)S-65_184_A[&host=S-65,state=A,time.parent=68,time=72]:4)S-65_183_A[&host=S-65,state=A,time.parent=65,time=68]:4,(152[&host=S-3838,state=A,time.parent=117,time=119]:27,(119[&host=S-2978,state=A,time.parent=107,time=119]:24,(237[&host=S-6230,state=A,time.parent=115,time=119]:16,(102[&host=S-2656,state=A,time.parent=116,time=119]:8,181[&host=S-4378,state=A,time.parent=119,time=119]:8)S-2656_8313_A[&host=S-2656,state=A,time.parent=106,time=111]:8)S-737_2232_A[&host=S-737,state=A,time.parent=102,time=103]:8)S-737_2229_A[&host=S-737,state=A,time.parent=92,time=95]:3)S-404_1215_A[&host=S-404,state=A,time.parent=86,time=92]:28)S-65_181_A[&host=S-65,state=A,time.parent=63,time=64]:1,((132[&host=S-3402,state=A,time.parent=115,time=119]:26,(176[&host=S-4297,state=A,time.parent=116,time=119]:8,302[&host=S-7696,state=A,time.parent=116,time=119]:8)S-2222_6907_A[&host=S-2222,state=A,time.parent=110,time=111]:18)S-401_1202_A[&host=S-401,state=A,time.parent=86,time=93]:23,(121[&host=S-3037,state=A,time.parent=108,time=119]:40,(153[&host=S-3843,state=A,time.parent=116,time=119]:24,346[&host=S-8853,state=A,time.parent=118,time=119]:24)S-556_1654_A[&host=S-556,state=A,time.parent=89,time=95]:16)S-117_320_A[&host=S-117,state=A,time.parent=70,time=79]:9)S-64_178_A[&host=S-64,state=A,time.parent=63,time=70]:7)S-26_72_A[&host=S-26,state=A,time.parent=53,time=63]:15)S-11_28_A[&host=S-11,state=A,time.parent=47,time=48]:1,(((15[&host=S-305,state=A,time.parent=97,time=99]:26,(227[&host=S-5911,state=A,time.parent=114,time=119]:27,386[&host=S-10095,state=A,time.parent=119,time=119]:27)S-350_1045_A[&host=S-350,state=A,time.parent=84,time=92]:19)S-116_317_A[&host=S-116,state=A,time.parent=70,time=73]:3,(((7[&host=S-155,state=A,time.parent=86,time=88]:2,197[&host=S-4984,state=A,time.parent=113,time=119]:33)S-155_441_A[&host=S-155,state=A,time.parent=85,time=86]:1,(124[&host=S-3111,state=A,time.parent=108,time=119]:19,336[&host=S-8616,state=A,time.parent=117,time=119]:19)S-666_2015_A[&host=S-666,state=A,time.parent=91,time=100]:15)S-155_440_A[&host=S-155,state=A,time.parent=84,time=85]:1,(226[&host=S-5897,state=A,time.parent=114,time=119]:28,256[&host=S-6552,state=A,time.parent=115,time=119]:28)S-344_1024_A[&host=S-344,state=A,time.parent=84,time=91]:7)S-155_439_A[&host=S-155,state=A,time.parent=83,time=84]:14)S-55_156_A[&host=S-55,state=A,time.parent=61,time=70]:14,((((2[&host=S-46,state=A,time.parent=68,time=72]:4,((((356[&host=S-9219,state=A,time.parent=118,time=119]:44,(((94[&host=S-2524,state=A,time.parent=117,time=119]:13,323[&host=S-8244,state=A,time.parent=117,time=119]:13)S-1167_3551_A[&host=S-1167,state=A,time.parent=98,time=106]:23,(81[&host=S-2081,state=A,time.parent=115,time=119]:33,112[&host=S-2875,state=A,time.parent=119,time=119]:33)S-332_994_A[&host=S-332,state=A,time.parent=83,time=86]:3)S-191_569_A[&host=S-191,state=A,time.parent=82,time=83]:1,(14[&host=S-303,state=A,time.parent=95,time=96]:1,118[&host=S-2961,state=A,time.parent=117,time=119]:24)S-303_902_A[&host=S-303,state=A,time.parent=89,time=95]:13)S-191_568_A[&host=S-191,state=A,time.parent=76,time=82]:7,((74[&host=S-1943,state=A,time.parent=116,time=118]:18,411[&host=S-10593,state=A,time.parent=119,time=119]:19)S-570_1697_A[&host=S-570,state=A,time.parent=99,time=100]:13,(95[&host=S-2538,state=A,time.parent=115,time=119]:21,208[&host=S-5306,state=A,time.parent=113,time=119]:21)S-679_2054_A[&host=S-679,state=A,time.parent=91,time=98]:11)S-174_510_A[&host=S-174,state=A,time.parent=75,time=87]:12)S-97_280_A[&host=S-97,state=A,time.parent=73,time=75]:2,(278[&host=S-7242,state=A,time.parent=116,time=119]:20,(150[&host=S-3796,state=A,time.parent=111,time=119]:9,(65[&host=S-1686,state=A,time.parent=115,time=117]:5,184[&host=S-4541,state=A,time.parent=112,time=119]:7)S-1686_5205_A[&host=S-1686,state=A,time.parent=111,time=112]:2)S-1686_5203_A[&host=S-1686,state=A,time.parent=101,time=110]:11)S-974_3121_A[&host=S-974,state=A,time.parent=96,time=99]:26)S-97_279_A[&host=S-97,state=A,time.parent=72,time=73]:1,(225[&host=S-5866,state=A,time.parent=114,time=119]:20,310[&host=S-7795,state=A,time.parent=117,time=119]:20)S-371_1100_A[&host=S-371,state=A,time.parent=93,time=99]:27)S-97_278_A[&host=S-97,state=A,time.parent=71,time=72]:1,(((((235[&host=S-6191,state=H,time.parent=119,time=119]:18,275[&host=S-7179,state=I,time.parent=116,time=119]:18,316[&host=S-8006,state=H,time.parent=117,time=119]:18)S-763_2319_H[&host=S-763,state=H,time.parent=98,time=101]:4,(137[&host=S-3487,state=H,time.parent=119,time=119]:4,257[&host=S-6656,state=H,time.parent=115,time=119]:4)S-3487_10639_H[&host=S-3487,state=H,time.parent=112,time=115]:18)S-763_2317_H[&host=S-763,state=H,time.parent=93,time=97]:5,(250[&host=S-6486,state=H,time.parent=115,time=119]:21,(113[&host=S-2877,state=H,time.parent=117,time=119]:19,372[&host=S-9584,state=H,time.parent=118,time=119]:19,(((377[&host=S-9737,state=H,time.parent=118,time=119]:13,(221[&host=S-5803,state=H,time.parent=114,time=119]:10,390[&host=S-10150,state=H,time.parent=119,time=119]:10)S-2587_8074_H[&host=S-2587,state=H,time.parent=106,time=109]:3)S-1495_4582_H[&host=S-1495,state=H,time.parent=105,time=106]:1,(243[&host=S-6360,state=H,time.parent=119,time=119]:0,414[&host=S-10892,state=H,time.parent=119,time=119]:0,415[&host=S-10893,state=H,time.parent=119,time=119]:0)S-6360_15683_H[&host=S-6360,state=H,time.parent=115,time=119]:14)S-1495_4581_H[&host=S-1495,state=H,time.parent=104,time=105]:2,(140[&host=S-3528,state=H,time.parent=118,time=119]:13,(424[&host=S-9873,state=H,time.parent=119,time=119]:10,(322[&host=S-8222,state=I,time.parent=117,time=119]:2,(144[&host=S-3615,state=I,time.parent=119,time=119]:0,391[&host=S-10155,state=I,time.parent=119,time=119]:0,392[&host=S-10156,state=I,time.parent=119,time=119]:0,393[&host=S-10157,state=I,time.parent=119,time=119]:0)S-3615_10979_I[&host=S-3615,state=I,time.parent=117,time=119]:2)S-3615_10978_I[&host=S-3615,state=I,time.parent=109,time=117]:8)S-2634_8240_H[&host=S-2634,state=H,time.parent=106,time=109]:3)S-1922_5950_H[&host=S-1922,state=H,time.parent=103,time=106]:3)S-1495_4579_H[&host=S-1495,state=H,time.parent=100,time=103]:3)S-712_2168_H[&host=S-712,state=H,time.parent=98,time=100]:2)S-712_2167_H[&host=S-712,state=H,time.parent=92,time=98]:6)S-290_866_H[&host=S-290,state=H,time.parent=89,time=92]:3,((175[&host=S-4285,state=H,time.parent=119,time=119]:10,376[&host=S-9735,state=H,time.parent=118,time=119]:10)S-2162_6722_H[&host=S-2162,state=H,time.parent=104,time=109]:12,(378[&host=S-9738,state=H,time.parent=119,time=119]:17,((201[&host=S-5105,state=H,time.parent=119,time=119]:15,303[&host=S-7698,state=H,time.parent=116,time=119]:15)S-1107_3343_H[&host=S-1107,state=H,time.parent=103,time=104]:1,(161[&host=S-4014,state=H,time.parent=117,time=119]:9,162[&host=S-4016,state=H,time.parent=119,time=119]:9,382[&host=S-10035,state=H,time.parent=119,time=119]:9)S-3196_9878_H[&host=S-3196,state=H,time.parent=109,time=110]:7)S-1107_3342_H[&host=S-1107,state=H,time.parent=102,time=103]:1)S-1107_3341_H[&host=S-1107,state=H,time.parent=97,time=102]:5,(337[&host=S-8705,state=H,time.parent=118,time=119]:16,((48[&host=S-1108,state=H,time.parent=110,time=111]:1,145[&host=S-3664,state=H,time.parent=118,time=119]:9)S-1108_3353_H[&host=S-1108,state=H,time.parent=108,time=110]:2,(182[&host=S-4409,state=H,time.parent=119,time=119]:8,350[&host=S-8944,state=H,time.parent=118,time=119]:8)S-3010_9350_H[&host=S-3010,state=H,time.parent=108,time=111]:3)S-1108_3352_H[&host=S-1108,state=H,time.parent=107,time=108]:5)S-1108_3348_H[&host=S-1108,state=H,time.parent=97,time=103]:6)S-550_1634_H[&host=S-550,state=H,time.parent=89,time=97]:8)S-290_865_H[&host=S-290,state=H,time.parent=82,time=89]:9,(((((218[&host=S-5677,state=H,time.parent=114,time=119]:15,277[&host=S-7199,state=H,time.parent=116,time=119]:15)S-757_2295_H[&host=S-757,state=H,time.parent=101,time=104]:12,(223[&host=S-5823,state=H,time.parent=114,time=119]:16,271[&host=S-7114,state=H,time.parent=116,time=119]:16)S-698_2118_H[&host=S-698,state=H,time.parent=102,time=103]:11,(115[&host=S-2921,state=H,time.parent=117,time=119]:12,259[&host=S-6666,state=H,time.parent=119,time=119]:12)S-1973_6110_H[&host=S-1973,state=H,time.parent=103,time=107]:15)S-249_743_H[&host=S-249,state=H,time.parent=90,time=92]:2,((420[&host=S-11005,state=H,time.parent=119,time=119]:12,431[&host=S-9929,state=H,time.parent=119,time=119]:12)S-1603_4923_H[&host=S-1603,state=H,time.parent=101,time=107]:8,((202[&host=S-5118,state=H,time.parent=119,time=119]:13,343[&host=S-8834,state=H,time.parent=118,time=119]:13)S-2105_6545_H[&host=S-2105,state=H,time.parent=105,time=106]:2,(196[&host=S-4839,state=H,time.parent=112,time=119]:13,416[&host=S-10903,state=H,time.parent=119,time=119]:13)S-1323_4049_H[&host=S-1323,state=H,time.parent=104,time=106]:2)S-1323_4048_H[&host=S-1323,state=H,time.parent=103,time=104]:5)S-586_1764_H[&host=S-586,state=H,time.parent=90,time=99]:9)S-249_742_H[&host=S-249,state=H,time.parent=89,time=90]:1,(363[&host=S-9372,state=H,time.parent=118,time=119]:22,(138[&host=S-3497,state=H,time.parent=119,time=119]:17,(126[&host=S-3173,state=H,time.parent=118,time=119]:11,(412[&host=S-10719,state=H,time.parent=119,time=119]:6,(258[&host=S-6659,state=H,time.parent=115,time=119]:4,285[&host=S-7382,state=H,time.parent=116,time=119]:4)S-3496_10660_H[&host=S-3496,state=H,time.parent=113,time=115]:2)S-3496_10659_H[&host=S-3496,state=H,time.parent=109,time=113]:5)S-1744_5388_H[&host=S-1744,state=H,time.parent=102,time=108]:6)S-540_1603_H[&host=S-540,state=H,time.parent=100,time=102]:5)S-540_1600_H[&host=S-540,state=H,time.parent=89,time=97]:8)S-249_741_H[&host=S-249,state=H,time.parent=87,time=89]:2,(325[&host=S-8265,state=H,time.parent=117,time=119]:27,(147[&host=S-3761,state=H,time.parent=118,time=119]:18,(114[&host=S-2910,state=H,time.parent=118,time=119]:16,(163[&host=S-4068,state=I,time.parent=119,time=119]:15,268[&host=S-6949,state=H,time.parent=116,time=119]:15,359[&host=S-9242,state=H,time.parent=118,time=119]:15)S-1189_3620_H[&host=S-1189,state=H,time.parent=103,time=104]:1)S-1189_3619_H[&host=S-1189,state=H,time.parent=101,time=103]:2)S-1189_3618_H[&host=S-1189,state=H,time.parent=98,time=101]:9)S-474_1403_H[&host=S-474,state=H,time.parent=87,time=92]:5,(219[&host=S-5700,state=H,time.parent=114,time=119]:22,(164[&host=S-4069,state=H,time.parent=117,time=119]:21,405[&host=S-10370,state=H,time.parent=119,time=119]:21)S-475_1407_H[&host=S-475,state=H,time.parent=97,time=98]:1)S-475_1406_H[&host=S-475,state=H,time.parent=87,time=97]:10)S-249_740_H[&host=S-249,state=H,time.parent=80,time=87]:7,(((214[&host=S-5442,state=H,time.parent=119,time=119]:28,(298[&host=S-7586,state=H,time.parent=116,time=119]:22,((365[&host=S-9450,state=H,time.parent=118,time=119]:15,384[&host=S-10057,state=H,time.parent=119,time=119]:15,(90[&host=S-2374,state=H,time.parent=117,time=118]:13,264[&host=S-6832,state=H,time.parent=115,time=119]:14)S-1472_4494_H[&host=S-1472,state=H,time.parent=104,time=105]:1)S-1472_4493_H[&host=S-1472,state=H,time.parent=103,time=104]:4,(193[&host=S-4775,state=H,time.parent=112,time=119]:7,(246[&host=S-6438,state=H,time.parent=115,time=119]:4,247[&host=S-6439,state=H,time.parent=115,time=119]:4,(344[&host=S-8837,state=H,time.parent=118,time=119]:1,345[&host=S-8838,state=H,time.parent=118,time=119]:1,(101[&host=S-2647,state=H,time.parent=119,time=119]:0,425[&host=S-9875,state=H,time.parent=119,time=119]:0,426[&host=S-9876,state=H,time.parent=119,time=119]:0)S-2647_8286_H[&host=S-2647,state=H,time.parent=118,time=119]:1)S-2647_8285_H[&host=S-2647,state=H,time.parent=115,time=118]:3)S-2647_8284_H[&host=S-2647,state=H,time.parent=112,time=115]:3)S-2647_8283_H[&host=S-2647,state=H,time.parent=111,time=112]:12)S-634_1919_H[&host=S-634,state=H,time.parent=97,time=100]:3)S-634_1918_H[&host=S-634,state=H,time.parent=91,time=97]:6)S-250_748_H[&host=S-250,state=H,time.parent=90,time=91]:1,((76[&host=S-1951,state=H,time.parent=116,time=117]:18,((407[&host=S-10523,state=H,time.parent=119,time=119]:13,(324[&host=S-8249,state=H,time.parent=117,time=119]:2,397[&host=S-10187,state=H,time.parent=119,time=119]:2)S-3705_11178_H[&host=S-3705,state=H,time.parent=116,time=117]:11)S-1324_4055_H[&host=S-1324,state=H,time.parent=105,time=106]:1,(233[&host=S-6037,state=H,time.parent=114,time=119]:10,321[&host=S-8212,state=H,time.parent=117,time=119]:10)S-2350_7324_H[&host=S-2350,state=H,time.parent=105,time=109]:4)S-1324_4054_H[&host=S-1324,state=H,time.parent=104,time=105]:6)S-587_1772_H[&host=S-587,state=H,time.parent=97,time=99]:2,(306[&host=S-7744,state=H,time.parent=117,time=119]:16,(339[&host=S-8721,state=H,time.parent=118,time=119]:15,(291[&host=S-7512,state=H,time.parent=116,time=119]:9,(229[&host=S-5927,state=H,time.parent=119,time=119]:7,368[&host=S-9494,state=H,time.parent=118,time=119]:7)S-3012_9359_H[&host=S-3012,state=H,time.parent=110,time=112]:2)S-3012_9358_H[&host=S-3012,state=H,time.parent=108,time=110]:6)S-1117_3386_H[&host=S-1117,state=H,time.parent=103,time=104]:1)S-1117_3385_H[&host=S-1117,state=H,time.parent=97,time=103]:6)S-587_1771_H[&host=S-587,state=H,time.parent=90,time=97]:7)S-250_747_H[&host=S-250,state=H,time.parent=88,time=90]:2,(421[&host=S-11043,state=H,time.parent=119,time=119]:27,((111[&host=S-2866,state=H,time.parent=119,time=119]:12,(364[&host=S-9420,state=H,time.parent=118,time=119]:10,410[&host=S-10576,state=H,time.parent=119,time=119]:10)S-1583_4853_H[&host=S-1583,state=H,time.parent=108,time=109]:2)S-1583_4851_H[&host=S-1583,state=H,time.parent=106,time=107]:13,(99[&host=S-2575,state=H,time.parent=119,time=119]:20,355[&host=S-9179,state=H,time.parent=118,time=119]:20,(((352[&host=S-9102,state=H,time.parent=118,time=119]:1,388[&host=S-10115,state=H,time.parent=119,time=119]:1)S-3477_10617_H[&host=S-3477,state=H,time.parent=117,time=118]:10,(230[&host=S-5960,state=H,time.parent=118,time=119]:5,279[&host=S-7267,state=H,time.parent=116,time=119]:5)S-3158_9766_H[&host=S-3158,state=H,time.parent=108,time=114]:6)S-1667_5148_H[&host=S-1667,state=H,time.parent=101,time=108]:8,(179[&host=S-4365,state=H,time.parent=119,time=119]:8,180[&host=S-4366,state=H,time.parent=117,time=119]:8)S-2590_8090_H[&host=S-2590,state=H,time.parent=106,time=111]:11,(135[&host=S-3440,state=H,time.parent=119,time=119]:11,(211[&host=S-5376,state=H,time.parent=118,time=119]:1,373[&host=S-9601,state=H,time.parent=118,time=119]:1)S-5376_14401_H[&host=S-5376,state=H,time.parent=116,time=118]:10)S-1531_4695_H[&host=S-1531,state=H,time.parent=100,time=108]:8)S-867_2634_H[&host=S-867,state=H,time.parent=99,time=100]:1)S-867_2633_H[&host=S-867,state=H,time.parent=94,time=99]:5,(398[&host=S-10249,state=H,time.parent=119,time=119]:16,419[&host=S-10990,state=H,time.parent=119,time=119]:16)S-866_2630_H[&host=S-866,state=H,time.parent=94,time=103]:9)S-511_1505_H[&host=S-511,state=H,time.parent=92,time=94]:2)S-511_1504_H[&host=S-511,state=H,time.parent=88,time=92]:4)S-250_746_H[&host=S-250,state=H,time.parent=80,time=88]:8)S-132_368_H[&host=S-132,state=H,time.parent=78,time=80]:9)S-97_277_A[&host=S-97,state=A,time.parent=68,time=71]:3)S-46_129_A[&host=S-46,state=A,time.parent=64,time=68]:4,(3[&host=S-75,state=A,time.parent=76,time=80]:4,(320[&host=S-8182,state=A,time.parent=117,time=119]:35,(106[&host=S-2775,state=A,time.parent=119,time=119]:29,(107[&host=S-2790,state=A,time.parent=117,time=119]:22,188[&host=S-4580,state=A,time.parent=112,time=119]:22)S-690_2085_A[&host=S-690,state=A,time.parent=92,time=97]:7)S-186_556_A[&host=S-186,state=A,time.parent=84,time=90]:6)S-186_555_A[&host=S-186,state=A,time.parent=76,time=84]:8)S-75_210_A[&host=S-75,state=A,time.parent=74,time=76]:12)S-46_128_A[&host=S-46,state=A,time.parent=61,time=64]:5,(6[&host=S-113,state=A,time.parent=80,time=85]:5,9[&host=S-247,state=A,time.parent=93,time=96]:16)S-113_311_A[&host=S-113,state=A,time.parent=70,time=80]:21)S-36_102_A[&host=S-36,state=A,time.parent=58,time=59]:1,((((92[&host=S-2480,state=A,time.parent=114,time=116]:26,120[&host=S-3011,state=A,time.parent=116,time=119]:29,263[&host=S-6745,state=A,time.parent=115,time=119]:29)S-209_623_A[&host=S-209,state=A,time.parent=84,time=90]:6,(183[&host=S-4427,state=A,time.parent=117,time=119]:29,(127[&host=S-3209,state=A,time.parent=117,time=119]:23,(160[&host=S-4013,state=A,time.parent=117,time=119]:18,349[&host=S-8939,state=A,time.parent=118,time=119]:18)S-1040_3073_A[&host=S-1040,state=A,time.parent=96,time=101]:5)S-612_1851_A[&host=S-612,state=A,time.parent=90,time=96]:6)S-361_1076_A[&host=S-361,state=A,time.parent=84,time=90]:6)S-209_622_A[&host=S-209,state=A,time.parent=78,time=84]:17,(19[&host=S-363,state=A,time.parent=98,time=102]:27,24[&host=S-448,state=A,time.parent=102,time=104]:29)S-93_255_A[&host=S-93,state=A,time.parent=67,time=75]:8)S-44_123_A[&host=S-44,state=A,time.parent=66,time=67]:2,(51[&host=S-1188,state=A,time.parent=104,time=112]:25,97[&host=S-2565,state=A,time.parent=117,time=119]:32)S-231_689_A[&host=S-231,state=A,time.parent=79,time=87]:22)S-44_121_A[&host=S-44,state=A,time.parent=58,time=65]:7,(154[&host=S-3878,state=A,time.parent=110,time=119]:25,387[&host=S-10114,state=C,time.parent=119,time=119]:25)S-357_1064_A[&host=S-357,state=A,time.parent=92,time=94]:36)S-36_101_A[&host=S-36,state=A,time.parent=56,time=58]:2)S-28_77_A[&host=S-28,state=A,time.parent=53,time=56]:9)S-11_27_A[&host=S-11,state=A,time.parent=40,time=47]:7,(((((71[&host=S-1836,state=A,time.parent=116,time=119]:26,(369[&host=S-9497,state=A,time.parent=118,time=119]:7,(122[&host=S-3096,state=A,time.parent=119,time=119]:0,380[&host=S-10000,state=A,time.parent=119,time=119]:0)S-3096_9579_A[&host=S-3096,state=A,time.parent=112,time=119]:7)S-3096_9578_A[&host=S-3096,state=A,time.parent=108,time=112]:19)S-325_969_A[&host=S-325,state=A,time.parent=83,time=93]:23,(10[&host=S-269,state=A,time.parent=90,time=96]:20,326[&host=S-8295,state=A,time.parent=117,time=119]:43)S-118_323_A[&host=S-118,state=A,time.parent=70,time=76]:6)S-69_194_A[&host=S-69,state=A,time.parent=68,time=70]:2,(36[&host=S-784,state=A,time.parent=107,time=108]:34,(185[&host=S-4544,state=A,time.parent=118,time=119]:23,(155[&host=S-3889,state=A,time.parent=119,time=119]:1,358[&host=S-9239,state=A,time.parent=118,time=119]:1)S-3889_11632_A[&host=S-3889,state=A,time.parent=110,time=118]:22)S-373_1107_A[&host=S-373,state=A,time.parent=94,time=96]:22)S-102_269_A[&host=S-102,state=A,time.parent=68,time=74]:6)S-69_193_A[&host=S-69,state=A,time.parent=63,time=68]:5,(169[&host=S-4200,state=A,time.parent=119,time=119]:50,(16[&host=S-312,state=A,time.parent=98,time=99]:19,20[&host=S-364,state=A,time.parent=84,time=96]:16)S-110_303_A[&host=S-110,state=A,time.parent=69,time=80]:11)S-62_174_A[&host=S-62,state=A,time.parent=63,time=69]:6)S-62_173_A[&host=S-62,state=A,time.parent=62,time=63]:12,((374[&host=S-9624,state=A,time.parent=118,time=119]:55,(30[&host=S-583,state=A,time.parent=104,time=106]:31,(117[&host=S-2943,state=B,time.parent=113,time=119]:27,(((62[&host=S-1491,state=B,time.parent=111,time=116]:5,(294[&host=S-7537,state=B,time.parent=116,time=119]:3,(329[&host=S-8391,state=B,time.parent=117,time=119]:2,(360[&host=S-9320,state=B,time.parent=118,time=119]:1,361[&host=S-9321,state=B,time.parent=118,time=119]:1,(168[&host=S-4130,state=B,time.parent=119,time=119]:0,403[&host=S-10332,state=B,time.parent=119,time=119]:0)S-4130_12183_B[&host=S-4130,state=B,time.parent=118,time=119]:1)S-4130_12182_B[&host=S-4130,state=B,time.parent=117,time=118]:1)S-4130_12181_B[&host=S-4130,state=B,time.parent=116,time=117]:1)S-4130_12180_B[&host=S-4130,state=B,time.parent=111,time=116]:5)S-1491_4558_B[&host=S-1491,state=B,time.parent=105,time=111]:6,(241[&host=S-6358,state=B,time.parent=115,time=119]:4,242[&host=S-6359,state=B,time.parent=115,time=119]:4,(341[&host=S-8782,state=B,time.parent=118,time=119]:1,342[&host=S-8783,state=B,time.parent=118,time=119]:1,(91[&host=S-2378,state=B,time.parent=119,time=119]:0,423[&host=S-9825,state=B,time.parent=119,time=119]:0)S-2378_7432_B[&host=S-2378,state=B,time.parent=118,time=119]:1)S-2378_7431_B[&host=S-2378,state=B,time.parent=115,time=118]:3)S-2378_7430_B[&host=S-2378,state=B,time.parent=105,time=115]:10)S-1491_4557_B[&host=S-1491,state=B,time.parent=100,time=105]:5,(205[&host=S-5259,state=B,time.parent=118,time=119]:13,(158[&host=S-3997,state=B,time.parent=110,time=119]:12,216[&host=S-5493,state=B,time.parent=114,time=119]:12)S-1492_4561_B[&host=S-1492,state=B,time.parent=106,time=107]:1)S-1492_4560_B[&host=S-1492,state=B,time.parent=100,time=106]:6)S-704_2141_B[&host=S-704,state=B,time.parent=92,time=100]:8)S-264_789_B[&host=S-264,state=B,time.parent=87,time=92]:17)S-70_198_A[&host=S-70,state=A,time.parent=64,time=75]:11)S-23_64_A[&host=S-23,state=A,time.parent=57,time=64]:7,(54[&host=S-1221,state=A,time.parent=113,time=115]:17,77[&host=S-1958,state=A,time.parent=103,time=117]:19)S-635_1923_A[&host=S-635,state=A,time.parent=91,time=98]:41)S-23_63_A[&host=S-23,state=A,time.parent=51,time=57]:6,(((244[&host=S-6391,state=A,time.parent=115,time=119]:4,312[&host=S-7884,state=A,time.parent=117,time=119]:4)S-2478_7732_A[&host=S-2478,state=A,time.parent=105,time=115]:29,(217[&host=S-5639,state=A,time.parent=114,time=119]:24,228[&host=S-5920,state=A,time.parent=114,time=119]:24)S-434_1294_A[&host=S-434,state=A,time.parent=86,time=95]:9)S-283_845_A[&host=S-283,state=A,time.parent=81,time=86]:26,(125[&host=S-3121,state=A,time.parent=118,time=119]:51,((260[&host=S-6690,state=A,time.parent=119,time=119]:33,((215[&host=S-5452,state=A,time.parent=113,time=119]:27,(131[&host=S-3400,state=A,time.parent=109,time=117]:18,(86[&host=S-2196,state=A,time.parent=118,time=119]:19,220[&host=S-5738,state=A,time.parent=119,time=119]:19)S-738_2238_A[&host=S-738,state=A,time.parent=99,time=100]:1)S-738_2237_A[&host=S-738,state=A,time.parent=92,time=99]:7)S-415_1244_A[&host=S-415,state=A,time.parent=90,time=92]:2,(136[&host=S-3463,state=A,time.parent=115,time=119]:20,190[&host=S-4706,state=A,time.parent=119,time=119]:20)S-615_1863_A[&host=S-615,state=A,time.parent=97,time=99]:9)S-415_1243_A[&host=S-415,state=A,time.parent=89,time=90]:4)S-182_536_A[&host=S-182,state=A,time.parent=76,time=86]:14,((84[&host=S-2185,state=A,time.parent=104,time=118]:27,289[&host=S-7476,state=H,time.parent=116,time=119]:28)S-503_1482_A[&host=S-503,state=A,time.parent=88,time=91]:4,((272[&host=S-7122,state=A,time.parent=116,time=119]:26,304[&host=S-7703,state=A,time.parent=116,time=119]:26)S-464_1377_A[&host=S-464,state=A,time.parent=91,time=93]:2,(59[&host=S-1416,state=B,time.parent=112,time=114]:14,280[&host=S-7300,state=B,time.parent=116,time=119]:19)S-1136_3449_B[&host=S-1136,state=B,time.parent=97,time=100]:9)S-464_1376_A[&host=S-464,state=A,time.parent=87,time=91]:4)S-218_651_A[&host=S-218,state=A,time.parent=78,time=87]:15)S-51_141_A[&host=S-51,state=A,time.parent=71,time=72]:4)S-51_139_A[&host=S-51,state=A,time.parent=60,time=68]:8)S-22_60_A[&host=S-22,state=A,time.parent=59,time=60]:9)S-10_25_A[&host=S-10,state=A,time.parent=40,time=51]:11)S-6_13_A[&host=S-6,state=A,time.parent=37,time=40]:3,(((((5[&host=S-112,state=A,time.parent=80,time=83]:21,((58[&host=S-1342,state=A,time.parent=114,time=115]:34,(249[&host=S-6477,state=A,time.parent=115,time=119]:35,309[&host=S-7787,state=A,time.parent=117,time=119]:35)S-162_466_A[&host=S-162,state=A,time.parent=81,time=84]:3)S-162_465_A[&host=S-162,state=A,time.parent=75,time=81]:10,(252[&host=S-6491,state=E,time.parent=115,time=119]:4,253[&host=S-6492,state=E,time.parent=115,time=119]:4,254[&host=S-6493,state=E,time.parent=115,time=119]:4,(274[&host=S-7156,state=E,time.parent=116,time=119]:3,(347[&host=S-8881,state=E,time.parent=118,time=119]:1,(109[&host=S-2812,state=E,time.parent=119,time=119]:0,430[&host=S-9916,state=E,time.parent=119,time=119]:0)S-2812_8766_E[&host=S-2812,state=E,time.parent=118,time=119]:1)S-2812_8765_E[&host=S-2812,state=E,time.parent=116,time=118]:2)S-2812_8764_E[&host=S-2812,state=E,time.parent=115,time=116]:1)S-2812_8763_E[&host=S-2812,state=E,time.parent=114,time=115]:44)S-59_164_A[&host=S-59,state=A,time.parent=62,time=71]:9)S-17_44_A[&host=S-17,state=A,time.parent=55,time=62]:7,(((105[&host=S-2748,state=A,time.parent=117,time=119]:46,((4[&host=S-89,state=A,time.parent=80,time=83]:3,(394[&host=S-10161,state=A,time.parent=119,time=119]:32,(70[&host=S-1830,state=A,time.parent=108,time=115]:23,(133[&host=S-3430,state=A,time.parent=118,time=119]:19,(34[&host=S-745,state=A,time.parent=103,time=105]:2,78[&host=S-1983,state=A,time.parent=115,time=116]:13)S-745_2266_A[&host=S-745,state=A,time.parent=100,time=103]:3)S-745_2265_A[&host=S-745,state=A,time.parent=92,time=100]:8)S-478_1415_A[&host=S-478,state=A,time.parent=87,time=92]:5)S-266_795_A[&host=S-266,state=A,time.parent=80,time=87]:7,(52[&host=S-1199,state=A,time.parent=98,time=108]:18,198[&host=S-4998,state=A,time.parent=119,time=119]:29)S-516_1522_A[&host=S-516,state=A,time.parent=88,time=90]:10)S-89_243_A[&host=S-89,state=A,time.parent=75,time=80]:5,((33[&host=S-645,state=A,time.parent=103,time=104]:16,255[&host=S-6536,state=A,time.parent=115,time=119]:31)S-301_893_A[&host=S-301,state=A,time.parent=82,time=88]:6,(43[&host=S-958,state=A,time.parent=107,time=110]:20,148[&host=S-3763,state=B,time.parent=117,time=119]:29)S-169_498_A[&host=S-169,state=A,time.parent=82,time=90]:8)S-169_497_A[&host=S-169,state=A,time.parent=75,time=82]:7)S-89_242_A[&host=S-89,state=A,time.parent=73,time=75]:2)S-89_241_A[&host=S-89,state=A,time.parent=67,time=73]:10,(8[&host=S-244,state=A,time.parent=91,time=94]:3,(32[&host=S-633,state=A,time.parent=102,time=105]:6,399[&host=S-10262,state=A,time.parent=119,time=119]:20)S-633_1914_A[&host=S-633,state=A,time.parent=91,time=99]:8)S-244_724_A[&host=S-244,state=A,time.parent=80,time=91]:28)S-32_93_A[&host=S-32,state=A,time.parent=62,time=63]:1,((406[&host=S-10480,state=A,time.parent=119,time=119]:29,(123[&host=S-3097,state=A,time.parent=119,time=119]:0,381[&host=S-10001,state=A,time.parent=119,time=119]:0)S-3097_9582_A[&host=S-3097,state=A,time.parent=117,time=119]:29)S-342_1019_A[&host=S-342,state=A,time.parent=84,time=90]:19,(300[&host=S-7675,state=A,time.parent=116,time=119]:38,(13[&host=S-288,state=A,time.parent=96,time=97]:8,167[&host=S-4119,state=A,time.parent=115,time=119]:30)S-288_858_A[&host=S-288,state=A,time.parent=88,time=89]:8)S-129_359_A[&host=S-129,state=A,time.parent=71,time=81]:10)S-61_170_A[&host=S-61,state=A,time.parent=62,time=71]:9)S-32_92_A[&host=S-32,state=A,time.parent=55,time=62]:7)S-17_43_A[&host=S-17,state=A,time.parent=54,time=55]:1,((85[&host=S-2195,state=A,time.parent=104,time=115]:30,(142[&host=S-3603,state=A,time.parent=109,time=119]:32,(28[&host=S-538,state=A,time.parent=98,time=104]:15,31[&host=S-625,state=A,time.parent=104,time=106]:17)S-221_660_A[&host=S-221,state=A,time.parent=87,time=89]:2)S-221_659_A[&host=S-221,state=A,time.parent=85,time=87]:2)S-221_658_A[&host=S-221,state=A,time.parent=78,time=85]:22,(((134[&host=S-3434,state=A,time.parent=118,time=119]:19,210[&host=S-5351,state=H,time.parent=113,time=119]:19)S-823_2498_A[&host=S-823,state=A,time.parent=94,time=100]:20,((385[&host=S-10092,state=C,time.parent=119,time=119]:20,((236[&host=S-6228,state=C,time.parent=115,time=119]:11,383[&host=S-10047,state=C,time.parent=119,time=119]:11)S-1974_6115_C[&host=S-1974,state=C,time.parent=103,time=108]:8,(284[&host=S-7357,state=C,time.parent=116,time=119]:10,293[&host=S-7534,state=C,time.parent=116,time=119]:10)S-1490_4553_C[&host=S-1490,state=C,time.parent=108,time=109]:9)S-702_2134_C[&host=S-702,state=C,time.parent=99,time=100]:1)S-702_2133_C[&host=S-702,state=C,time.parent=92,time=99]:8,(((212[&host=S-5422,state=C,time.parent=119,time=119]:19,(262[&host=S-6736,state=C,time.parent=118,time=119]:17,(66[&host=S-1725,state=C,time.parent=115,time=116]:5,295[&host=S-7546,state=C,time.parent=119,time=119]:8)S-1725_5328_C[&host=S-1725,state=C,time.parent=102,time=111]:9)S-1473_4500_C[&host=S-1473,state=C,time.parent=100,time=102]:2)S-639_1935_C[&host=S-639,state=C,time.parent=98,time=100]:2,(165[&host=S-4075,state=C,time.parent=118,time=119]:15,308[&host=S-7785,state=C,time.parent=117,time=119]:15,327[&host=S-8322,state=C,time.parent=117,time=119]:15)S-1223_3725_C[&host=S-1223,state=C,time.parent=98,time=104]:6)S-639_1934_C[&host=S-639,state=C,time.parent=96,time=98]:2,(287[&host=S-7435,state=C,time.parent=116,time=119]:20,(314[&host=S-7980,state=C,time.parent=117,time=119]:2,427[&host=S-9910,state=C,time.parent=119,time=119]:2)S-2799_8724_C[&host=S-2799,state=C,time.parent=113,time=117]:18,((370[&host=S-9505,state=C,time.parent=118,time=119]:10,(379[&host=S-9761,state=C,time.parent=118,time=119]:3,396[&host=S-10185,state=C,time.parent=119,time=119]:3)S-3698_11164_C[&host=S-3698,state=C,time.parent=115,time=116]:7)S-1271_3883_C[&host=S-1271,state=C,time.parent=107,time=109]:2,((224[&host=S-5865,state=C,time.parent=114,time=119]:5,(251[&host=S-6488,state=C,time.parent=115,time=119]:4,(108[&host=S-2800,state=C,time.parent=119,time=119]:0,428[&host=S-9911,state=C,time.parent=119,time=119]:0,429[&host=S-9912,state=C,time.parent=119,time=119]:0)S-2800_8732_C[&host=S-2800,state=C,time.parent=115,time=119]:4)S-2800_8731_C[&host=S-2800,state=C,time.parent=114,time=115]:1)S-2800_8730_C[&host=S-2800,state=C,time.parent=112,time=114]:2,(366[&host=S-9487,state=C,time.parent=118,time=119]:1,367[&host=S-9488,state=C,time.parent=118,time=119]:1,(195[&host=S-4802,state=C,time.parent=119,time=119]:0,408[&host=S-10547,state=C,time.parent=119,time=119]:0,409[&host=S-10548,state=C,time.parent=119,time=119]:0)S-4802_13474_C[&host=S-4802,state=C,time.parent=118,time=119]:1)S-4802_13473_C[&host=S-4802,state=C,time.parent=112,time=118]:6)S-2800_8729_C[&host=S-2800,state=C,time.parent=111,time=112]:5)S-1271_3882_C[&host=S-1271,state=C,time.parent=105,time=107]:8)S-1042_3082_C[&host=S-1042,state=C,time.parent=96,time=99]:3,(234[&host=S-6088,state=C,time.parent=114,time=119]:5,402[&host=S-10312,state=C,time.parent=119,time=119]:5)S-4042_11999_C[&host=S-4042,state=C,time.parent=111,time=114]:18)S-639_1933_C[&host=S-639,state=C,time.parent=91,time=96]:5)S-259_775_C[&host=S-259,state=C,time.parent=80,time=91]:11)S-163_469_A[&host=S-163,state=A,time.parent=75,time=80]:7,(146[&host=S-3737,state=A,time.parent=115,time=119]:39,(26[&host=S-476,state=A,time.parent=105,time=107]:20,282[&host=S-7338,state=A,time.parent=116,time=119]:32)S-254_760_A[&host=S-254,state=A,time.parent=85,time=87]:7)S-146_411_A[&host=S-146,state=A,time.parent=73,time=80]:7)S-67_187_A[&host=S-67,state=A,time.parent=63,time=73]:10)S-29_84_A[&host=S-29,state=A,time.parent=61,time=63]:9)S-17_42_A[&host=S-17,state=A,time.parent=52,time=54]:2,((35[&host=S-762,state=A,time.parent=93,time=104]:33,((103[&host=S-2673,state=A,time.parent=118,time=119]:36,187[&host=S-4558,state=A,time.parent=112,time=119]:36)S-166_482_A[&host=S-166,state=A,time.parent=76,time=83]:7,(156[&host=S-3923,state=A,time.parent=118,time=119]:36,((331[&host=S-8465,state=A,time.parent=117,time=119]:29,348[&host=S-8901,state=A,time.parent=118,time=119]:29)S-183_542_A[&host=S-183,state=A,time.parent=86,time=90]:4,(265[&host=S-6834,state=B,time.parent=115,time=119]:27,(319[&host=S-8126,state=A,time.parent=117,time=119]:15,371[&host=S-9550,state=A,time.parent=118,time=119]:15)S-1072_3247_A[&host=S-1072,state=A,time.parent=97,time=104]:12)S-416_1247_A[&host=S-416,state=A,time.parent=86,time=92]:6)S-183_541_A[&host=S-183,state=A,time.parent=84,time=86]:3)S-183_539_A[&host=S-183,state=A,time.parent=76,time=83]:7,(209[&host=S-5319,state=A,time.parent=113,time=119]:35,(159[&host=S-4007,state=A,time.parent=116,time=119]:34,338[&host=S-8717,state=A,time.parent=118,time=119]:34)S-185_550_A[&host=S-185,state=A,time.parent=84,time=85]:1)S-185_549_A[&host=S-185,state=A,time.parent=76,time=84]:8,(166[&host=S-4104,state=A,time.parent=111,time=119]:34,288[&host=S-7445,state=A,time.parent=116,time=119]:34)S-184_545_A[&host=S-184,state=A,time.parent=76,time=85]:9)S-166_481_A[&host=S-166,state=A,time.parent=75,time=76]:5)S-71_201_A[&host=S-71,state=A,time.parent=64,time=71]:9,((204[&host=S-5243,state=A,time.parent=119,time=119]:41,((((177[&host=S-4300,state=D,time.parent=119,time=119]:16,(267[&host=S-6933,state=D,time.parent=116,time=119]:8,(296[&host=S-7556,state=D,time.parent=116,time=119]:3,297[&host=S-7557,state=D,time.parent=116,time=119]:3,(362[&host=S-9351,state=D,time.parent=118,time=119]:1,(174[&host=S-4257,state=D,time.parent=119,time=119]:0,404[&host=S-10365,state=D,time.parent=119,time=119]:0)S-4257_12437_D[&host=S-4257,state=D,time.parent=118,time=119]:1)S-4257_12436_D[&host=S-4257,state=D,time.parent=116,time=118]:2)S-4257_12435_D[&host=S-4257,state=D,time.parent=111,time=116]:5)S-2018_6263_D[&host=S-2018,state=D,time.parent=103,time=111]:8)S-899_2728_D[&host=S-899,state=D,time.parent=102,time=103]:1,(206[&host=S-5272,state=D,time.parent=113,time=119]:6,(100[&host=S-2629,state=D,time.parent=117,time=118]:1,313[&host=S-7928,state=D,time.parent=117,time=119]:2)S-2629_8225_D[&host=S-2629,state=D,time.parent=115,time=117]:4)S-2629_8223_D[&host=S-2629,state=D,time.parent=112,time=113]:11)S-899_2727_D[&host=S-899,state=D,time.parent=101,time=102]:2,(231[&host=S-6010,state=D,time.parent=119,time=119]:10,330[&host=S-8394,state=D,time.parent=117,time=119]:10)S-1535_4707_D[&host=S-1535,state=D,time.parent=108,time=109]:9)S-899_2725_D[&host=S-899,state=D,time.parent=95,time=100]:21,((307[&host=S-7780,state=D,time.parent=117,time=119]:21,333[&host=S-8562,state=E,time.parent=117,time=119]:21)S-1156_3510_A[&host=S-1156,state=A,time.parent=97,time=98]:1,(192[&host=S-4750,state=A,time.parent=112,time=119]:19,(38[&host=S-811,state=A,time.parent=109,time=110]:6,(87[&host=S-2209,state=A,time.parent=119,time=119]:6,335[&host=S-8596,state=A,time.parent=117,time=119]:6)S-2209_6863_A[&host=S-2209,state=A,time.parent=112,time=113]:9)S-811_2459_A[&host=S-811,state=A,time.parent=101,time=104]:4)S-811_2457_A[&host=S-811,state=A,time.parent=99,time=100]:3)S-811_2455_A[&host=S-811,state=A,time.parent=93,time=97]:18)S-128_356_A[&host=S-128,state=A,time.parent=78,time=79]:1)S-128_355_A[&host=S-128,state=A,time.parent=77,time=78]:1,(42[&host=S-947,state=A,time.parent=108,time=109]:20,57[&host=S-1325,state=A,time.parent=99,time=111]:22)S-261_782_A[&host=S-261,state=A,time.parent=88,time=89]:12)S-128_354_A[&host=S-128,state=A,time.parent=71,time=77]:15)S-24_68_A[&host=S-24,state=A,time.parent=52,time=62]:10)S-17_41_A[&host=S-17,state=A,time.parent=47,time=52]:9,(173[&host=S-4237,state=A,time.parent=119,time=119]:58,((213[&host=S-5425,state=A,time.parent=113,time=119]:10,(328[&host=S-8337,state=A,time.parent=117,time=119]:9,401[&host=S-10281,state=A,time.parent=119,time=119]:9)S-2424_7578_A[&host=S-2424,state=A,time.parent=109,time=110]:1)S-2424_7577_A[&host=S-2424,state=A,time.parent=105,time=109]:33,(139[&host=S-3520,state=A,time.parent=109,time=119]:38,(21[&host=S-382,state=A,time.parent=98,time=104]:18,((23[&host=S-443,state=A,time.parent=99,time=102]:7,88[&host=S-2243,state=A,time.parent=111,time=118]:23)S-443_1318_A[&host=S-443,state=A,time.parent=93,time=95]:3,(143[&host=S-3610,state=A,time.parent=115,time=119]:18,422[&host=S-9785,state=A,time.parent=119,time=119]:18)S-741_2249_A[&host=S-741,state=A,time.parent=92,time=101]:9)S-443_1316_A[&host=S-443,state=A,time.parent=86,time=92]:6)S-382_1141_A[&host=S-382,state=A,time.parent=85,time=86]:5,(53[&host=S-1200,state=A,time.parent=110,time=111]:23,60[&host=S-1437,state=A,time.parent=111,time=112]:24)S-279_834_A[&host=S-279,state=A,time.parent=81,time=88]:7)S-181_533_A[&host=S-181,state=A,time.parent=76,time=81]:5)S-126_349_A[&host=S-126,state=A,time.parent=71,time=76]:15)S-31_89_A[&host=S-31,state=A,time.parent=55,time=61]:18)S-9_22_A[&host=S-9,state=A,time.parent=41,time=43]:6)S-6_12_A[&host=S-6,state=A,time.parent=31,time=37]:22,(((((12[&host=S-287,state=A,time.parent=87,time=96]:29,(67[&host=S-1743,state=A,time.parent=114,time=116]:14,186[&host=S-4554,state=A,time.parent=112,time=119]:17)S-539_1597_A[&host=S-539,state=A,time.parent=89,time=102]:35)S-53_150_A[&host=S-53,state=A,time.parent=66,time=67]:1,((25[&host=S-455,state=A,time.parent=95,time=97]:2,357[&host=S-9236,state=A,time.parent=118,time=119]:24)S-455_1352_A[&host=S-455,state=A,time.parent=87,time=95]:13,(151[&host=S-3821,state=A,time.parent=118,time=119]:32,171[&host=S-4212,state=A,time.parent=119,time=119]:32)S-306_908_A[&host=S-306,state=A,time.parent=82,time=87]:5)S-202_598_A[&host=S-202,state=A,time.parent=77,time=82]:16)S-53_149_A[&host=S-53,state=A,time.parent=61,time=66]:9,((375[&host=S-9686,state=A,time.parent=118,time=119]:49,(83[&host=S-2125,state=A,time.parent=117,time=119]:43,((46[&host=S-1039,state=A,time.parent=96,time=108]:25,(39[&host=S-832,state=A,time.parent=103,time=110]:26,395[&host=S-10180,state=A,time.parent=119,time=119]:35)S-180_529_A[&host=S-180,state=A,time.parent=83,time=84]:1)S-180_528_A[&host=S-180,state=A,time.parent=81,time=83]:2,(11[&host=S-278,state=A,time.parent=93,time=97]:4,(418[&host=S-10928,state=A,time.parent=119,time=119]:11,(129[&host=S-3239,state=A,time.parent=118,time=119]:1,351[&host=S-9015,state=A,time.parent=118,time=119]:1)S-3239_10020_A[&host=S-3239,state=A,time.parent=117,time=118]:10)S-2203_6836_A[&host=S-2203,state=A,time.parent=104,time=108]:15)S-278_832_A[&host=S-278,state=A,time.parent=81,time=93]:12)S-180_527_A[&host=S-180,state=A,time.parent=76,time=81]:5)S-121_332_A[&host=S-121,state=A,time.parent=70,time=76]:6)S-90_245_A[&host=S-90,state=A,time.parent=67,time=70]:3,((40[&host=S-892,state=A,time.parent=95,time=110]:28,(18[&host=S-362,state=A,time.parent=96,time=97]:13,305[&host=S-7737,state=A,time.parent=117,time=119]:35)S-222_665_A[&host=S-222,state=A,time.parent=82,time=84]:2)S-222_664_A[&host=S-222,state=A,time.parent=80,time=82]:5,((73[&host=S-1889,state=A,time.parent=116,time=119]:34,413[&host=S-10835,state=A,time.parent=119,time=119]:34)S-204_606_A[&host=S-204,state=A,time.parent=82,time=85]:3,(37[&host=S-804,state=A,time.parent=107,time=112]:16,199[&host=S-5049,state=A,time.parent=113,time=119]:23)S-804_2433_A[&host=S-804,state=A,time.parent=93,time=96]:14)S-204_605_A[&host=S-204,state=A,time.parent=77,time=82]:5)S-91_251_A[&host=S-91,state=A,time.parent=76,time=77]:10)S-37_105_A[&host=S-37,state=A,time.parent=57,time=67]:10)S-19_52_A[&host=S-19,state=A,time.parent=54,time=57]:14,((55[&host=S-1279,state=A,time.parent=111,time=112]:42,((292[&host=S-7522,state=A,time.parent=116,time=119]:26,389[&host=S-10147,state=A,time.parent=119,time=119]:26)S-377_1119_A[&host=S-377,state=A,time.parent=92,time=93]:9,(63[&host=S-1589,state=A,time.parent=113,time=115]:27,178[&host=S-4351,state=A,time.parent=111,time=119]:31)S-346_1031_A[&host=S-346,state=A,time.parent=87,time=88]:4)S-160_458_A[&host=S-160,state=A,time.parent=82,time=84]:14)S-52_145_A[&host=S-52,state=A,time.parent=68,time=70]:2,(238[&host=S-6240,state=A,time.parent=117,time=119]:42,290[&host=S-7493,state=A,time.parent=116,time=119]:42)S-99_287_A[&host=S-99,state=A,time.parent=76,time=77]:9)S-52_144_A[&host=S-52,state=A,time.parent=60,time=68]:25)S-8_17_A[&host=S-8,state=A,time.parent=36,time=43]:7,(1[&host=S-15,state=A,time.parent=60,time=61]:1,((79[&host=S-2026,state=A,time.parent=111,time=112]:17,276[&host=S-7185,state=A,time.parent=116,time=119]:24)S-481_1429_A[&host=S-481,state=A,time.parent=92,time=95]:22,(340[&host=S-8739,state=A,time.parent=118,time=119]:23,(334[&host=S-8572,state=A,time.parent=117,time=119]:18,(80[&host=S-2052,state=A,time.parent=117,time=119]:11,128[&host=S-3219,state=A,time.parent=116,time=119]:11)S-2052_6369_A[&host=S-2052,state=A,time.parent=104,time=108]:7)S-1030_3046_A[&host=S-1030,state=A,time.parent=96,time=101]:5)S-560_1664_A[&host=S-560,state=A,time.parent=89,time=96]:23)S-87_235_A[&host=S-87,state=A,time.parent=66,time=73]:13,((239[&host=S-6270,state=A,time.parent=115,time=119]:40,(157[&host=S-3978,state=A,time.parent=110,time=119]:13,222[&host=S-5814,state=A,time.parent=114,time=119]:13)S-1656_5111_A[&host=S-1656,state=A,time.parent=101,time=106]:27,(286[&host=S-7421,state=A,time.parent=116,time=119]:21,299[&host=S-7612,state=A,time.parent=116,time=119]:21)S-629_1905_A[&host=S-629,state=A,time.parent=91,time=98]:19)S-143_402_A[&host=S-143,state=A,time.parent=77,time=79]:8,(96[&host=S-2539,state=A,time.parent=116,time=119]:42,((400[&host=S-10272,state=A,time.parent=119,time=119]:33,(240[&host=S-6341,state=A,time.parent=115,time=119]:14,261[&host=S-6693,state=A,time.parent=115,time=119]:14)S-1352_4140_A[&host=S-1352,state=A,time.parent=101,time=105]:19)S-271_807_A[&host=S-271,state=A,time.parent=83,time=86]:3,(41[&host=S-922,state=A,time.parent=107,time=109]:23,(170[&host=S-4203,state=A,time.parent=118,time=119]:24,172[&host=S-4223,state=A,time.parent=111,time=119]:24)S-678_2050_A[&host=S-678,state=A,time.parent=91,time=95]:9)S-334_1000_A[&host=S-334,state=A,time.parent=83,time=86]:3)S-271_806_A[&host=S-271,state=A,time.parent=82,time=83]:6)S-123_341_A[&host=S-123,state=A,time.parent=71,time=77]:6)S-47_131_A[&host=S-47,state=A,time.parent=60,time=71]:11,(47[&host=S-1055,state=A,time.parent=109,time=111]:29,130[&host=S-3341,state=A,time.parent=114,time=119]:37)S-154_435_A[&host=S-154,state=A,time.parent=74,time=82]:22)S-15_36_A[&host=S-15,state=A,time.parent=45,time=60]:24)S-5_10_A[&host=S-5,state=A,time.parent=23,time=36]:21)S-2_3_A[&host=S-2,state=A,time.parent=9,time=15];
+END;
