@@ -303,21 +303,21 @@ branchLengthLimit <- function(tree) {
       return(data.frame(node_num=node_num, MPPD=MPPD))
     }
   } ## Given a tree and (optionally) a distance matrix, return a vector giving the median pairwise patristic distance of the subtree under each internal node
-  pdist.clades <- function(clades, tree, distmat, mode=c('leaf', 'all')){
-    mode <- match.arg(mode)
-    
-    if(mode=='leaf'){
-      distmat <-  p.dist.mat.leaves
-      mclapply(clades, function(x) {
-        get.node.leaf.MPPD(x$from[1], tree, distmat)
-      }, mc.cores=numCores)
-    } else{
-      distmat <-  dist.nodes(tree)
-      mclapply(clades, function(x) {
-        get.node.full.MPPD(x$from[1], tree, distmat)
-      }, mc.cores=numCores)
-    }
-  } ## Determine MPPD for all well-supported clades
+  # pdist.clades <- function(clades, tree, distmat, mode=c('leaf', 'all')){
+  #   mode <- match.arg(mode)
+  #   
+  #   if(mode=='leaf'){
+  #     distmat <-  p.dist.mat.leaves
+  #     mclapply(clades, function(x) {
+  #       get.node.leaf.MPPD(x$from[1], tree, distmat)
+  #     }, mc.cores=numCores)
+  #   } else{
+  #     distmat <-  dist.nodes(tree)
+  #     mclapply(clades, function(x) {
+  #       get.node.full.MPPD(x$from[1], tree, distmat)
+  #     }, mc.cores=numCores)
+  #   }
+  # } ## Determine MPPD for all well-supported clades
   ### Create matrix of each pairwise patristic distance for external leaves using the following
   # leaves <- expand.grid(tree$tip.label,tree$tip.label)
   # p.dist.leaves <- sapply(seq_len(nrow(leaves)), ## Create list of all pairwise combinations of IDs using expand.grid()
@@ -336,8 +336,8 @@ branchLengthLimit <- function(tree) {
   hist(distvec$MPPD)
   
   ## Determine MPPDs for all well-supported clades
-  clade_MPPD <- pdist.clades(clades, tree, mode='leaf')
-  assign("clade_MPPD", clade_MPPD, envir=globalenv())
+  # clade_MPPD <- pdist.clades(clades, tree, mode='leaf')
+  # assign("clade_MPPD", clade_MPPD, envir=globalenv())
   
   branch_length_limit <- quantile(distvec$MPPD, opt$threshold)
   return(branch_length_limit)
