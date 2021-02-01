@@ -37,7 +37,7 @@ option_list = list(
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= dynamite]", metavar="character"),
   make_option(c("-l", "--leaves"), type="character", default="addLeaves", 
               help="choice of transformation to tree from bifurcating or addLeaves [default=addLeaves]", metavar="character"),
-  make_option(c("-t", "--threshold"), type="numeric", default=0.10, 
+  make_option(c("-o", "--threshold"), type="numeric", default=0.10, 
               help="branch length threshold [default= 0.10]", metavar="numeric")
   # make_option(c("-a", "--asr"), type="character", default="Y", 
   #             help="option of ancestral state reconstruction for each cluster [default= Y]", metavar="character")
@@ -67,7 +67,7 @@ if (numCores == "") {
 
 # Script will read in tree from directory based on a number of format
 # Function to read Nexus files or Newick files 
-write("Checking for tree file...")
+message("Checking for tree file...")
 checkFortree <- function(tree_file) {
   print("Make sure tree_file is scaled in substitutions/site and not in units of time.")
   # Check tree_file format -- either Newick or Nexus -- using suffices
@@ -87,118 +87,19 @@ checkFortree <- function(tree_file) {
 }# end checkfortree_file function
 sub_tree <- checkFortree(opt$tree)
 
-## Need to force binary tree and to replace zero branch lengths with full bootstrap support
-
-
-# message("Searching for metadata file...")
-# if(endsWith(opt$metadata, "csv")) {
-#   metadata <- read.csv(opt$metadata, header=T, stringsAsFactors = F) %>%
-#     dplyr::filter(ID %in% sub_tree$tip.label)
-# } else {
-#   if(endsWith(opt$metadata, "tab") | endsWith(opt$metadata, "txt")) {
-#     metadata <- read.table(opt$metadata, sep='\t', header=T, stringsAsFactors = F) %>%
-#       dplyr::filter(ID %in% sub_tree$tip.label)
-#   } 
-# }
-
-# if(isTRUE("X" %in% colnames(metadata))) { # rownames can be added to metadata if csv file, so need to remove before creating table
-#     metadata <- dplyr::select(metadata, -"X")
-#   }    else {metadata <- metadata} 
-
-
-#Script will first use least squares dating approach developed by To et al. (2016) in the package Rlsd2 (https://github.com/tothuhien/lsd2) to 1) find the optimal root position in the tree and 2) remove outliers with longer-than-expected (penalized) branch lengths, and 3) output both a timed tree and rooted substitutions/site tree to the global environment (updates sub_tree).
-# Function to convert sub_tree to time_tree
-#write("Converting substitution tree into timed tree using lsd2 and dates provided in metadata file. Please make sure the metadata file contains IDs in the first column and dates in the second column. All other columns can be filled as desired...")
-# checkForDates <- function(metadata) {
-#   for (i in seq_along(colnames(metadata))) {
-#     if (tryCatch({
-#       isTRUE(any(grepl("id", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
-#       colnames(metadata)[i] <- "ID"
-#     } #end first ef statement
-#     if (tryCatch({
-#       isTRUE(any(grepl("date", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
-#       colnames(metadata)[i] <- "DATE"
-#     } # End second if statement
-#   } # End for loop
-#  
-#   assign("metadata", metadata, envir = globalenv())
-#   createSTS <- function(metadata) {
-#     date_range <- seq(as.Date("01/01/1900", "%d/%m/%Y"), as.Date(Sys.Date(), "%d/%m/%Y"), by="day")
-#     sts <- metadata$DATE
-#     if (isTRUE(class(sts) == "integer")) {
-#       sts <- as.Date(ISOdate(sts))
-#     } else if (isTRUE(class(sts) == "numeric")) {
-#       sts <- as.Date(date_decimal(sts))
-#     } else if (isTRUE(class(sts) == "character")) {
-#       sts <- as.Date(sts, tryFormats = c("%Y-%m-%d", "%Y/%m/%d"))
-#       if (isTRUE(min(sts, na.rm=T) < min(date_range))) { # Attempt to correct if in wrong format, which we will know if the first date is before 1900s
-#         sts <- as.Date(metadata$DATE, tryFormats = c("%m/%d/%Y", "%m-%d-%Y", "%d/%m/%Y", "%d-%m-%Y"))
-#       }
-#     } # if-else statement
-#     metadata$DATE <- sts
-#     assign("metadata", metadata, envir = globalenv()) # Need dates for metadata table as well for downstream analysis
-#     sts <- setNames(sts, metadata$ID)
-#     sts <- sts[names(sts) %in% sub_tree$tip.label]
-#     return(sts)
-#   }
-#   sts <- createSTS(metadata)
-#    
-#   ## Checkpoint
-# #  if (isTRUE(max(as.Date(ISOdate(sts, 1, 1)))> Sys.Date())) {
-#     if (isTRUE(max(sts) > Sys.Date())) {
-# 
-#     write(paste("The following sequences likely have incorret dates:",
-#                   return(sts[sts==max(sts)]),
-#     "Please start DYNAMITE again, placing a .tab metadata file with consistent date information in current folder.",
-#                   sep=" "))
-#     stop()
-#   } # End checkpoint if statement
-#   ## Will need sts in downstream analyses
-#   return(sts)
-# } # End checkForDates function
-# sts <- checkForDates(metadata)
-# 
-# DateTree <- function(sub_tree, seqLen) {
-# #   result <- dater(sub_tree, decimal_date(sts), ncpu=4, parallel_foreach=TRUE)
-#   result <- lsd2(inputTree=sub_tree,
-#                  inputDate=decimal_date(sts),
-#                  estimateRoot="as",
-#                  constraint=TRUE,
-#                  variance=1,
-#                  ZscoreOutlier = 3,
-#                  outFile = "lsd2_results",
-#                  seqLen = seqLen,
-#                  nullblen=-1
-#                  )
-#   assign("sub_tree", result$newickTree, envir=globalenv())
-#   assign("time_tree", result$dateNexusTreeFile@phylo, envir=globalenv())
-#   # assign("time_tree_data", result$dateNexusTreeFile, envir=globalenv()) ## Something wrong with node numbers in this tree, so grab from time_tree
-#   assign("tmrca", result$tMRCA, envir=globalenv())
-# }# End DateTree function
-# DateTree(sub_tree, opt$seqLen)
-# 
-# # Function to specify most recent sampling date (mrsd)
-# findMRSD <- function(time_tree) {
-#     date.mrsd <- max(sts[names(sts) %in% time_tree$tip.label])
-#     mrsd <- decimal_date(date.mrsd)
-#     
-#     gg_tree <- ggtree(time_tree, mrsd=date.mrsd) + theme_tree2()
-#     assign("gg_tree", gg_tree, envir = globalenv())
-#     node_dates <- gg_tree$data ## Could also do nodeHeights here....
-#     assign("node_dates", node_dates, envir=globalenv())
-#     assign("num.mrsd", mrsd, envir=globalenv())
-#     assign("date.mrsd", date.mrsd, envir=globalenv())
-#   print(paste0("The updated most recent sampling date is ", date.mrsd))
-# } # End findMRSD function
-# findMRSD(time_tree)
-
 # Find all well-supported clades
-write("Defining well-supported clades within the tree using node labels...")
+message("Defining well-supported clades within the tree using node labels...")
 define.clades <- function(sub_tree) {
   ## Grab only subtrees that are supported by bootstrap values >90
   ## We may need to change this in case people have other support values
   ## Note that subtrees() function in ape renumbers nodes, so useless here, since at the end we wish to recombine the information
-  write("Creating list of all subtrees...This may take a while.")
+  message("Creating list of all subtrees...This may take a while.")
+  
+  if (isTRUE(any(grepl("/", sub_tree$node.label)))) {
+    sub_tree$node.label <- gsub("(.+)\\/(.+)", "\\2", sub_tree$node.label)
+  }
+  
+  
   family_tree <- tidytree::as_tibble(sub_tree)
   ## Need to relabel columns so that "parent" and "node" are "from" and "to" for familyR::get_children function
   colnames(family_tree)[1:2] <- c("from", "to")
@@ -206,13 +107,15 @@ define.clades <- function(sub_tree) {
   family_tree <- data.table::as.data.table(family_tree)
   assign("family_tree", family_tree, envir = globalenv())
   
-  write("Extract well-supported subtrees.")
-  supported_nodes <- list()
-  if(max(as.numeric(sub_tree$node.label), na.rm=T) >1) {
-  supported_nodes <- suppressWarnings(filter(family_tree, as.numeric(label) > 90))
-  } else {
-    supported_nodes <- suppressWarnings(filter(family_tree, as.numeric(label) > 0.90))
-  }
+  message("Extract well-supported subtrees.")
+  supported_nodes <- family_tree
+  # supported_nodes <- list()
+  ## Need to account for multiple support values (defaulting to second)
+  # if(max(as.numeric(sub_tree$node.label), na.rm=T) >1) {
+  # supported_nodes <- suppressWarnings(filter(family_tree, as.numeric(label) > 90))
+  # } else {
+  #   supported_nodes <- suppressWarnings(filter(family_tree, as.numeric(label) > 0.90))
+  # }
   assign("supported_nodes", supported_nodes, envir = globalenv())  
   
   ## Creating a list for all sub_trees using the familyR package (get_children function)
@@ -240,7 +143,6 @@ define.clades <- function(sub_tree) {
 
 } # End defineClades function
 define.clades(sub_tree)
-
 
 # Using a pre-order (root-to-tip) tree traversal, for each node, find subtrees/clades (>=3 nodes) for which cumulative mean branch, or edge, length is within the branch length limit at that level within the tree using the "branch-wise" algorithm, or "b". Note this should only be used with epidemics that are past the exponential phase of growth.
 
@@ -271,7 +173,7 @@ merge.overlap.clust <- function(clusters) {
   result <- list()
   for (ct in seq_along(clusters)) {
     for (cc in seq_along(copy)) {
-      if (isTRUE(sum(copy[[cc]]$to %in% clusters[[ct]]$to) > 0.1*length(copy[[cc]]$to)) &
+      if (isTRUE(sum(copy[[cc]]$to %in% clusters[[ct]]$to) > 0.50*length(copy[[cc]]$to)) &
           isTRUE(names(copy)[[cc]] != names(clusters)[[ct]])) {
         unwanted[[cc]] <- copy[[cc]]
         clusters[[ct]] <- full_join(copy[[cc]], clusters[[ct]], by=c("from", "to", "branch.length", "label"))
@@ -563,7 +465,7 @@ phylopart <- function(tree, branch_length_limit) {
 }
 
 
-write("Picking clusters based on user choice of algorithm....")
+message("Picking clusters based on user choice of algorithm....")
 branch_length_limit <- branchLengthLimit(sub_tree)
 if (opt$cluster == "b") {
   clusters <- branchWise(sub_tree, branch_length_limit, make_tree=opt$leaves)
@@ -572,331 +474,14 @@ if (opt$cluster == "b") {
     clusters <- phylopart(sub_tree, branch_length_limit)
     clusters <- mclapply(clusters, function(x) dplyr::rename(x, parent=from, node=to), mc.cores=numCores)
   } else {
-    write("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")
+    message("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")
   }
 }
 
 
-#Employ ancestral state reconstruction of traits (optional)
-
-# ancStateRecon <- function(tree, metadata) {
-# ## The element lik.anc gives us the marginal ancestral states, also known as the 'empirical Bayesian posterior probabilities.'
-# write("Estimating likelihood of ancestral states...", stderr())
-# feed.mode <- list()
-# fitER <- list()
-# ## set zero-length branches to be 1/1000000 total tree length
-# dst<-multi2di(tree)
-# dst$edge.length[dst$edge.length==0]<-max(nodeHeights(tree))*1e-6
-# 
-# rownames(metadata) <- metadata$ID
-# for (i in 3:ncol(metadata)) { # Requires that taxa id and sampling dates are first two columns
-#   feed.mode[[i-2]] <- setNames(metadata[,i],rownames(metadata))
-#   fitER[[i-2]] <- ace(feed.mode[[i-2]], dst, model = "ER", type="discrete")
-# }
-# names(fitER) <- colnames(metadata[,3:ncol(metadata)])
-# 
-# ## Look here for http://www.phytools.org/Cordoba2017/ex/8/Anc-states-discrete.html for distribution of sampled stochastic character maps when have more computing power
-# 
-# ## simulate single stochastic character map using empirical Bayes method
-# #mtrees<-make.simmap(sub_tree,feed.mode,model="ER",nsim=100)
-# 
-# ### Create rate matrix (Q) ################################################
-# ### This will need to be modified to incorporate several columns of traits
-# ### See https://cran.r-project.org/web/packages/filling/filling.pdf for incomplete data ### filling!
-# # Q <-list()
-# # for (column in 2:ncol(traits)) {
-# #   suppressWarnings({ ## We know it fills diagonals with NAs
-# #   Q[[column]] <- diag(unique(traits[,column]), nrow = length(unique(traits[,column])))
-# #   })
-# #   diag(Q[[column]]) = 1-nrow(Q[[column]])
-# #   Q[[column]][lower.tri(Q[[column]])] <- 1
-# #   Q[[column]][upper.tri(Q[[column]])] <- 1
-# #   colnames(Q[[column]]) <- rownames(Q[[column]]) <- unique(traits[,column])
-# # }
-# # Q <- plyr::compact(Q)
-# # names(Q) <- colnames(traits[-1])
-# 
-# 
-# anc.states <- fitER
-# for (i in 1:length(fitER)) {
-#   anc.states[[i]] <- as.data.frame(fitER[[i]]$lik.anc)
-#   anc.states[[i]]$node <- as.character(1:dst$Nnode+Ntip(dst))
-# }
-#  names(anc.states) <- names(fitER)
-#  
-# 
-# ## Combine node state labels and probabilities with tip state labels (and prob of 1) - may need to go back and use smart bind so that have separate columns for tip.label?
-# 
-# ## Should consider transforming data in to states, rather than probabilities, and assign state of "unknown" to nodes with <90% probability of any particular state
-# 
-# tip_labels <- list()
-# for (i in 3:ncol(metadata)) {
-#   tip_labels[[i-2]] <- as.data.frame(cbind(rownames(metadata), metadata[,i]), stringsAsFactors = F)
-#   colnames(tip_labels[[i-2]])[1] <- "node"
-#   tip_labels[[i-2]] <- dplyr::mutate(tip_labels[[i-2]], value=1, V2) %>%
-#     spread(V2, value, fill=0)
-#   ## Reorder tip labels according to order in sub_tree and assign numeric labels given in sub_tree in order to integrate all data into a tibble.
-#   tip_labels[[i-2]] <- tip_labels[[i-2]][order(match(tip_labels[[i-2]]$node, dst$tip.label)),]
-#   tip_labels[[i-2]]$node <- as.character(as.numeric(1:length(dst$tip.label)))
-# }
-# names(tip_labels) <- colnames(metadata[,3:ncol(metadata)])
-# 
-# for (i in seq_along(anc.states)) {
-#   anc.states[[i]] <- rbind(tip_labels[[i]], anc.states[[i]])
-# }
-# 
-# ## For now, best to only assign one state (per trait) per node, rather than probabilities, and, in order to incorporate uncertainty, we will assign "NEI" (Not Enough Info) to any node with <90% posterior probability of any given state.
-# 
-# anc.states <- mclapply(anc.states, function(x) {
-#   gather(x, trait, pr, -node) %>%
-#     group_by(node) %>%
-#     dplyr::mutate(max_pr = max(pr)) %>% ## Determine if reliable state found for each node using max probability
-#     dplyr::mutate(trait = case_when(max_pr < 0.90 ~ "NEI",
-#                                       max_pr >= 0.90 ~ trait)) %>% ## When a node does not have single, reliable state, assign "NE" for "Not enough info" as the trait to that node
-#     dplyr::filter(pr>0.90 | trait == "NEI") %>% ## Assign each node a single trait (the one with >90% prob)
-#     dplyr::select(-pr, -max_pr) %>% ## Get rid of probability columns
-#     dplyr::arrange(as.numeric(node)) %>% # Order the data by node (not necessary but useful)
-#     dplyr::distinct() %>%# Left with redundant info for NEI nodes, so remove.
-#     dplyr::mutate(node = as.integer(node)) %>%
-#     left_join(., dplyr::select(node_dates, node, x), by="node") %>%
-#     dplyr::rename(to = "node", DATE = "x")
-#   #names(anc.states[[i]])[names(anc.states[[i]]) == 'node'] <- 'to'
-#       ## Need to change node back to integer to integrate with data downstream
-# #    anc.states[[i]]$to <- as.integer(anc.states[[i]]$to)
-# #    anc.states[[i]] <- anc.states[[i]][order(anc.states[[i]]$to),]
-# }, mc.cores=numCores) # End loop among ancestral states
-# 
-# return(anc.states)
-# } # End asrClusters function on traits
-# 
-# write("Performinc ancestral state reconstruction...")
-# if (opt$asr == "Y"){
-# write("ASR performed using the empirical Bayesian method.")
-#   asr <- ancStateRecon(sub_tree, metadata) #traits
-# } else {
-#   if (opt$asr == "N"){
-#   write("ASR not performed - results will rely on sampled data only.")
-# } else {
-#   write("Correct response not detected.")
-# }
-# }
-#   
-
-# Data manipulation for characterization of clusters and export of data for visualization
-write("Performing quick data manipulation... Hold on to your butts!")
-## Merge metadata with cluster data
-# dataManip <- function(clusters) {
-# 
-# ## Need to convert clusters to list if only a single cluster found (will be in dataframe format, rather than list)
-# 
-# if (class(clusters) == "data.frame") {
-#   clusters <- list(clusters) 
-#   } else if (class(clusters) == "list") {
-#     clusters <- clusters
-#   } else {warning("class of clusters data unknown, error in dataManip() function or above")}
-# 
-#   if (isTRUE(exists("asr", envir = globalenv()))) { #Only use if ASR incorporated above
-#     asr2 <- bind_rows(asr, .id = "field")
-#     asr2$to <- as.integer(asr2$to)
-# 
-# #   cluster_data <- mclapply(clusters, function(c) {
-# #     merge(c, asr2, by.x="node" , by.y="to") %>%
-# # #      dplyr::rename(parent = "from", node = "to") %>%
-# #       dplyr::select(parent, everything()) %>%
-# #       merge(., dplyr::select(node_dates, node, x), by.x=c("node", "DATE"), by.y=c("node", "x"))
-# #   }, mc.cores=numCores)
-# #   
-# #   } else {
-#     
-#     metadata2 <- gather(metadata, field, trait,  -ID, -DATE, factor_key=TRUE)
-#     
-#     anc.state.data <- mclapply(clusters, function(x) {
-#       anc.field <- dplyr::select(asr2, field, to) %>%
-#         dplyr::filter(to == x$parent[1])
-#       anc.trait <- dplyr::select(asr2,trait, to) %>%
-#         dplyr::filter(to == x$parent[1])
-#       x <- merge(anc.field, anc.trait, by="to")
-#       return(x)
-#     }, mc.cores = numCores)
-#     
-#     
-#     cluster_data <- list()
-#     for (i in seq_along(clusters)) {
-#       cluster_data[[i]] <- merge(clusters[[i]], metadata2, by.x = "label", by.y="ID", all=T) %>%
-#         dplyr::select(parent, everything())
-#       cluster_data[[i]] <- merge(cluster_data[[i]], anc.state.data[[i]], by.x=c("parent", "field", "trait"), by.y=c("to", "field", "trait"), all=T)
-#     }
-#     
-# 
-# }
-# 
-# return(cluster_data)
-# 
-# } # End dataManip() function
-# 
-# cluster_data <- dataManip(clusters)
-
-## Now DYNAMITE determines if clusters are related by connecting the children of each cluster to the root of remaining clusters
-# connectClust <- function(sub_tree, cluster_data) {
-#   
-#   cluster_data <- cluster_data
-#   dup_cluster_data <- cluster_data
-#   full_tree <- as_tibble(sub_tree)
-#   
-#   for (i in seq_along(cluster_data)) {
-#     
-#     for (j in seq_along(dup_cluster_data)) {
-#       dup_cluster_data[[j]]$birth_origin <- NA
-#       #      dup_cluster_data[[j]]$birth_origin <- NA
-#       ## If the parent of origin node of one cluster (found by referencing full tree) is a child node in one of the other clusters... 
-#       if (isTRUE(names(cluster_data)[[i]] != names(dup_cluster_data)[[j]] &
-#                  (tidytree::parent(full_tree, dup_cluster_data[[j]]$parent[1])$node %in% cluster_data[[i]]$node |
-#                  ## Or if the parent of the parent of the origin node of one cluster (found by referencing full tree) is a child node in one of the other clusters... (meaning clusters are allowed to be separated by up to two branches)
-#                  tidytree::parent(full_tree, dup_cluster_data[[j]]$parent[1])$parent %in% cluster_data[[i]]$node))) {
-#         #        dup_cluster_data[[j]]$birth_origin == paste0("cluster_", cluster_data[[i]]$parent[1] )
-#         dup_cluster_data[[j]]$birth_origin = paste0(names(cluster_data)[[i]])
-#       } #End if statement
-#     } # End for loop along duplicate list
-#   } # End for loop along original list
-#   return(dup_cluster_data)
-# } #End connectClust function
-# 
-# cluster_data <- connectClust(sub_tree, cluster_data)
-
-
-# Added statistics, such as effective population size, basic reproductive number, Pybus's gamma, and others have been included below. Please note that Skygrowth-based estimates of Re and/or R0 are not accurate for clusters with true R0>5 or highly-sampled transmission clusters.
-
-#write("Claculating some tree statistics....Please note that Skygrowth-based estimates of Re and/or R0 are not accurate for clusters with true R0>5 or highly-sampled transmission clusters.")
-# calculateNe <- function(cluster) {
-# #  heights <- sapply(cluster$node, function(x) nodeheight(as.phylo(sub_tree), x))
-# #  times <- sapply(cluster$node, function(x) nodeheight(as.phylo(time_tree), x))
-# #  rtt <- summary(lm(heights~times))$adj.r.squared
-# #  if (rtt >= 0.10) {
-#     x <- as_tibble(cluster)   
-#     x <- arrange(x, parent, node)
-#     class(x) = c("tbl_tree", class(x))
-#     x <- as.phylo(x)
-#     x <- rtree(n = Ntip(x), tip.label = x$tip.label, br = x$edge.length) # Have to create new tree because nodes need to be numbered sequentially
-#  # } else{NULL}
-#   #b0 <- BNPR(x)
-#   #plot_BNPR( b0 )
-#   #p <- data.frame(time=rev(b0$x), Ne=b0$effpopmean)
-#     res=round(max(nodeHeights(x))/7)
-#     fit <- tryCatch(skygrowth.map(x, res=res), error=function(e) NULL)
-#   gr <- growth.plot(fit)
-#   p <- data.frame(time=fit$time, nemed=fit$ne)
-#   return(p)
-# }
-# calculateRe <- function(Ne, conf.level=0.95) {
-#   s <- 100 # sample size of 100
-# #  psi <- rnorm(s, 0.038, 0.014) #Duration of infection around 14 days 
-#   psi <- rnorm(s, 14, 5) #Duration of infection around 14 days -incubation period of 5 days
-# #  psi <- rnorm(s, 9, 5) #Duration of infection around 14 days -incubation period of 5 days
-#   Z=qnorm(0.5*(1 + conf.level))
-#   Re <- list()
-#   if (isTRUE(nrow(Ne) >2)) {
-#     for (i in 2:nrow(Ne)) {
-#       time = Ne$time[i-1]
-#       Re.dist = sample(1+psi*(Ne$nemed[i]-Ne$nemed[i-1])/((Ne$time[i]-Ne$time[i-1])*Ne$nemed[i-1]),
-#                        size=s, replace=F)
-#       logRe = log(Re.dist)
-#       SElogRe = sd(logRe)/sqrt(s) # standard deviation of 2, sample size of 10
-#       LCL = exp(mean(logRe) - Z*SElogRe) 
-#       UCL = exp(mean(logRe) + Z*SElogRe) 
-#       Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")"))
-#     }
-#   } else {Re <- list(NULL)}
-#   Re <- do.call("rbind",Re)
-# }
-# 
-# Ne_fulltree <- calculateNe(time_tree)
-# Re_fulltree <- calculateRe(Ne_fulltree)
-
-# calculateOster <- function(cluster, tree) {
-#   
-#   if (isTRUE("phylo" %in% class(cluster))) {  
-#     cluster_size <- length(cluster$tip.label)-1
-#     sum_heights <- sum(nodeHeights(cluster))
-#     longest <- max(nodeHeights(cluster))
-#     tr <- cluster_size/sum_heights + longest
-#   } else {
-#     if (isTRUE("tbl" %in% class(cluster) | "data.table" %in% class(cluster))) {
-#       x <- keep.tip(tree, cluster$label[cluster$label %in% tree$tip.label])
-#       cluster_size <- length(x$tip.label)-1
-#       sum_heights <- sum(nodeHeights(x))
-#       longest <- max(nodeHeights(x))
-#       tr <- cluster_size/sum_heights + longest
-#     }
-#   }
-#   return(tr)
-# }
-
-#tr <- lapply(clusters, function(x) calculateOster(x, tree@phylo))
-
-
-# gatherStats <- function(cluster) {
-#   tips <- unique(subset(cluster$node, cluster$node<=length(time_tree$tip.label) & !is.na(cluster$node)))
-#   tmp <- keep.tip(time_tree, tips)
-#   tmp <- multi2di(tmp)
-#   speciation_rate <- yule(as.phylo(tmp))$lambda
-#   Pybus_gamma <- ltt(as.phylo(tmp), plot=FALSE, gamma=TRUE)$gamma ## Maybe also consider plottng full ltt as well?
-# #  Ne <- calculateNe(as.phylo(tmp))
-# #  Re <- calculateRe(Ne, conf.level = 0.95)
-#   # Need calculateOster() in here somewhere
-#   
-#   TMRCA <- min(cluster$DATE, na.rm=T)
-#   timespan <- max(cluster$DATE, na.rm=T) - min(cluster$DATE, na.rm=T)
-#   cluster_origin <- cluster$birth_origin[1]
-#   
-#   ## Put distribution data into list of tables
-#   distdata <- dplyr::select(cluster, parent, field, trait, DATE) %>%
-#     dplyr::filter(parent != parent[1]) %>%
-#     tidyr::drop_na() %>%
-#     dplyr::select(-parent) %>%
-#     dplyr::group_by(field) %>%
-#     dplyr::group_split(.keep=T)
-# 
-#   fields <- do.call(rbind, mclapply(distdata, function(x) {
-#     paste(x$field[1])
-#   }, mc.cores=numCores)) ## For some reason order is not the same as order of column names in metadata
-# 
-#   names(distdata) <- fields
-#   
-#   ancdata <- dplyr::select(cluster, parent, field, trait) %>%
-#     dplyr::filter(parent == parent[1]) %>%
-#     dplyr::filter(!is.na(field)) %>%
-#     dplyr::select(-parent) %>%
-#     dplyr::group_by(field) %>%
-#     dplyr::group_split()
-#   
-#   fields <- do.call(rbind, mclapply(ancdata, function(x) {
-#     paste(x$field[1])
-#   }, mc.cores=numCores)) ## For some reason order is not the same as order of column names in metadata
-#   
-#   names(ancdata) <- fields
-# 
-#   ## Dynamics
-#   dynamics <- list()
-#   dynamics$birth <- NA
-#   dynamics$death <- NA
-# #  dynamics$rapid <- NA
-#   if (isTRUE(!is.na(cluster$birth_origin[1]))) {
-#     dynamics$birth <- "birth"
-#   } else {dynamics$birth <- NA}
-#   if (isTRUE(max(cluster$DATE) < num.mrsd-7/365)) {
-#     dynamics$death <- "death"
-#   } else {dynamics$death <- NA}
-#   # if (isTRUE(Re$mean_Re[1] > Re_fulltree$mean_Re[1])) {
-#   #   dynamics$rapid <- "rapid"
-#   # } else {dynamics$rapid <- NA}
-#   return(tibble::lst(distdata, ancdata, TMRCA, timespan, cluster_origin, speciation_rate, Pybus_gamma, dynamics))
-# }
-# 
-# cluster_stats <- lapply(cluster_data, gatherStats)
-
 # Visualization is based on the resulting list (per cluster) of data
 
-write("Data are now being exported as 'cluster_data.RDS' and 'tree_data.tree.'")
+message("Data are now being exported as 'cluster_data.RDS' and 'tree_data.tree.'")
 #saveRDS(cluster_stats, "cluster_data.RDS")
 saveRDS(clusters, paste("clusters", opt$threshold, ".RDS", sep="_"))
 
@@ -929,7 +514,7 @@ saveRDS(clusters, paste("clusters", opt$threshold, ".RDS", sep="_"))
 #   class(t.tbl) = c("tbl_tree", class(t.tbl))
 # 
 #   t2 <- as.treedata(t.tbl)
-#   text<-write.tree(t2@phylo)
+#   text<-message.tree(t2@phylo)
 #   strip.nodelabels<-function(text){
 #     obj<-strsplit(text,"")[[1]]
 #     cp<-grep(")",obj)
@@ -947,7 +532,7 @@ saveRDS(clusters, paste("clusters", opt$threshold, ".RDS", sep="_"))
 #   return(t2)
 # }
 # exported_tree <- exportTree(time_tree, cluster_data)
-# write.beast(exported_tree, "tree_data.tree")
+# message.beast(exported_tree, "tree_data.tree")
 
 rt1 <- Sys.time()
 rt1-rt0
