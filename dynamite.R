@@ -593,6 +593,8 @@ if (opt$cluster == "b") {
   nclust <- mclapply(possible_clusters, length, mc.cores=numCores)
   best <- max(do.call("rbind", nclust))
   clusters <- possible_clusters[which(nclust==best)]
+  branch_length_limit <- branch_length_limit[which(nclust==best)]
+  
   if (length(clusters)>1) {
     clusters <- last(clusters)[[1]]
   } else {
@@ -610,6 +612,8 @@ if (opt$cluster == "b") {
       clusters <- clusters[[1]]
     }
     clusters <- mclapply(clusters, function(x) dplyr::rename(x, parent=from, node=to), mc.cores=numCores)
+    branch_length_limit <- branch_length_limit[which(nclust==best)]
+    
   } else {
     message("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")
   }
@@ -944,6 +948,7 @@ cluster_stats <- lapply(cluster_data, gatherStats)
 
 write("Data are now being exported as 'cluster_data.RDS' and 'tree_data.tree.'")
 saveRDS(cluster_stats, "cluster_data.RDS")
+write.table(branch_length_limit, "branch_length_limit.txt")
 
 # test <- cluster_list[[1]][[1]][[2]]
 # test$trait <- as.factor(test$trait)
@@ -964,30 +969,15 @@ exportTree <- function(time_tree, cluster_data) {
       } 
     }
   }
-
+  
   t.tbl$dates <- date_decimal(t.tbl$dates)
   t.tbl$dates <- as.Date(t.tbl$dates)
   t.tbl$label <- paste(t.tbl$label, t.tbl$dates, sep="|")
   t.tbl <- dplyr::select(t.tbl, parent, node, branch.length, label, cluster_id) %>%
     as_tibble()
   class(t.tbl) = c("tbl_tree", class(t.tbl))
-
+  
   t2 <- as.treedata(t.tbl)
-  text<-write.tree(t2@phylo)
-  strip.nodelabels<-function(text){
-    obj<-strsplit(text,"")[[1]]
-    cp<-grep(")",obj)
-    csc<-c(grep(":",obj),length(obj))
-    exc<-cbind(cp,sapply(cp,function(x,y) y[which(y>x)[1]],y=csc))
-    exc<-exc[(exc[,2]-exc[,1])>1,]
-    inc<-rep(TRUE,length(obj))
-    if(nrow(exc)>0) for(i in 1:nrow(exc)) 
-      inc[(exc[i,1]+1):(exc[i,2]-1)]<-FALSE
-    paste(obj[inc],collapse="")
-  }
-  t2_phylo <- strip.nodelabels(text)
-  t2_phylo <- read.tree(text=t2_phylo)
-  t2@phylo <- t2_phylo
   return(t2)
 }
 exported_tree <- exportTree(time_tree, cluster_data)
