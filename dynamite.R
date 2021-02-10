@@ -380,7 +380,6 @@ branchLengthLimit <- function(tree, range) {
   return(branch_length_limit)
   
 }
-
 branchWise <- function(tree, branch_length_limit, make_tree) {
   #   findThreshold <- function(tree) {
   #     sub_tree <- as.phylo(tree)
@@ -510,16 +509,7 @@ branchWise <- function(tree, branch_length_limit, make_tree) {
     # }
     return(results)
   } # End function
-  pullClade <- function(tree, clusters) {
-    results <- list()# Copy clusters list for ease
-    for (c in seq_along(clusters)) {
-      results[[c]] <- extract.clade(sub_tree, clusters[[c]]$from[1])
-    } #End loop along clusters
-    # for (j in seq_along(results)) {
-    #   names(results)[[j]] <- paste0("c", j)
-    # }
-    return(results)
-  } # End function
+
   addLeaves <- function(tree, clusters) {
     sub_tree <- as_tibble(tree)
     x <- clusters  # Copy clusters list for ease
@@ -556,13 +546,9 @@ branchWise <- function(tree, branch_length_limit, make_tree) {
     clusters <- bifurcate(tree, clusters)
     clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
   } else {
-    if (make_tree=="pullClade") {
-      clusters <- pullClade(tree, clusters)
-    } else {
       if (make_tree=="addLeaves") {
         clusters <- addLeaves(tree, clusters)
         clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
-      }
     }
   }
   
@@ -618,6 +604,28 @@ if (opt$cluster == "b") {
     message("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")
   }
 }
+
+
+clusterPhylo <- function(clusters, sub_tree, time_tree) {
+  clusters_time_tree <- mclapply(clusters, function(x) {
+    tips <- x$label[x$label %in% time_tree$tip.label]
+    full_clade <- extract.clade(time_tree, findMRCA(time_tree, tips))
+    cluster <- keep.tip(full_clade, tips) # Need to make sure not full clade, but only tips present in cluster
+    return(cluster)
+    }, mc.cores=numCores)
+  assign("clusters_time_tree", clusters_time_tree, envir = globalenv() )
+  
+  clusters_sub_tree <- mclapply(clusters, function(x) {
+    tips <- x$label[x$label %in% sub_tree$tip.label]
+    full_clade <- extract.clade(sub_tree, findMRCA(sub_tree, tips))
+    cluster <- keep.tip(full_clade, tips) # Need to make sure not full clade, but only tips present in cluster
+    return(cluster)
+  }, mc.cores=numCores)
+
+#  clusters_sub_tree <- mclapply(clusters, as.phylo, mc.cores=numCores)
+  assign("clusters_sub_tree", clusters_sub_tree, envir = globalenv() )
+}
+clusterPhylo(clusters, sub_tree, time_tree)
 
 #Employ ancestral state reconstruction of traits (optional)
 
@@ -773,17 +781,16 @@ if (class(clusters) == "data.frame") {
     } else {
       
       for (i in seq_along(clusters)) {
-        cluster_data[[i]] <- merge(clusters[[i]], metadata2, by.x = "label", by.y="ID", all=T) %>%
-          dplyr::select(parent, everything())
+        cluster_data[[i]] <- merge(clusters[[i]], metadata2, by.x = "label", by.y="ID", all.x=T) %>%
+          dplyr::select(parent, node, field, trait, DATE)
       }
     
 
 }
-
+names(cluster_data) <- names(clusters)
 return(cluster_data)
 
 } # End dataManip() function
-
 cluster_data <- dataManip(clusters)
 
 ## Now DYNAMITE determines if clusters are related by connecting the children of each cluster to the root of remaining clusters
@@ -810,178 +817,268 @@ connectClust <- function(sub_tree, cluster_data) {
   } # End for loop along original list
   return(dup_cluster_data)
 } #End connectClust function
+cluster_data <- connectClust(sub_tree, cluster_data) 
 
-cluster_data <- connectClust(sub_tree, cluster_data)
-
-
-# Added statistics, such as effective population size, basic reproductive number, Pybus's gamma, and others have been included below. Please note that Skygrowth-based estimates of Re and/or R0 are not accurate for clusters with true R0>5 or highly-sampled transmission clusters.
-
-#write("Claculating some tree statistics....Please note that Skygrowth-based estimates of Re and/or R0 are not accurate for clusters with true R0>5 or highly-sampled transmission clusters.")
-# calculateNe <- function(cluster) {
-# #  heights <- sapply(cluster$node, function(x) nodeheight(as.phylo(sub_tree), x))
-# #  times <- sapply(cluster$node, function(x) nodeheight(as.phylo(time_tree), x))
-# #  rtt <- summary(lm(heights~times))$adj.r.squared
-# #  if (rtt >= 0.10) {
-#     x <- as_tibble(cluster)   
-#     x <- arrange(x, parent, node)
-#     class(x) = c("tbl_tree", class(x))
-#     x <- as.phylo(x)
-#     x <- rtree(n = Ntip(x), tip.label = x$tip.label, br = x$edge.length) # Have to create new tree because nodes need to be numbered sequentially
-#  # } else{NULL}
-#   #b0 <- BNPR(x)
-#   #plot_BNPR( b0 )
-#   #p <- data.frame(time=rev(b0$x), Ne=b0$effpopmean)
-#     res=round(max(nodeHeights(x))/7)
-#     fit <- tryCatch(skygrowth.map(x, res=res), error=function(e) NULL)
-#   gr <- growth.plot(fit)
-#   p <- data.frame(time=fit$time, nemed=fit$ne)
-#   return(p)
-# }
-# calculateRe <- function(Ne, conf.level=0.95) {
-#   s <- 100 # sample size of 100
-# #  psi <- rnorm(s, 0.038, 0.014) #Duration of infection around 14 days 
-#   psi <- rnorm(s, 14, 5) #Duration of infection around 14 days -incubation period of 5 days
-# #  psi <- rnorm(s, 9, 5) #Duration of infection around 14 days -incubation period of 5 days
-#   Z=qnorm(0.5*(1 + conf.level))
-#   Re <- list()
-#   if (isTRUE(nrow(Ne) >2)) {
-#     for (i in 2:nrow(Ne)) {
-#       time = Ne$time[i-1]
-#       Re.dist = sample(1+psi*(Ne$nemed[i]-Ne$nemed[i-1])/((Ne$time[i]-Ne$time[i-1])*Ne$nemed[i-1]),
-#                        size=s, replace=F)
-#       logRe = log(Re.dist)
-#       SElogRe = sd(logRe)/sqrt(s) # standard deviation of 2, sample size of 10
-#       LCL = exp(mean(logRe) - Z*SElogRe) 
-#       UCL = exp(mean(logRe) + Z*SElogRe) 
-#       Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")"))
-#     }
-#   } else {Re <- list(NULL)}
-#   Re <- do.call("rbind",Re)
-# }
-# 
-# Ne_fulltree <- calculateNe(time_tree)
-# Re_fulltree <- calculateRe(Ne_fulltree)
-
-# calculateOster <- function(cluster, tree) {
-#   
-#   if (isTRUE("phylo" %in% class(cluster))) {  
-#     cluster_size <- length(cluster$tip.label)-1
-#     sum_heights <- sum(nodeHeights(cluster))
-#     longest <- max(nodeHeights(cluster))
-#     tr <- cluster_size/sum_heights + longest
-#   } else {
-#     if (isTRUE("tbl" %in% class(cluster) | "data.table" %in% class(cluster))) {
-#       x <- keep.tip(tree, cluster$label[cluster$label %in% tree$tip.label])
-#       cluster_size <- length(x$tip.label)-1
-#       sum_heights <- sum(nodeHeights(x))
-#       longest <- max(nodeHeights(x))
-#       tr <- cluster_size/sum_heights + longest
-#     }
-#   }
-#   return(tr)
-# }
-
-#tr <- lapply(clusters, function(x) calculateOster(x, tree@phylo))
-
-
-gatherStats <- function(cluster) {
-  tips <- unique(subset(cluster$node, cluster$node<=length(time_tree$tip.label) & !is.na(cluster$node)))
-  tmp <- keep.tip(time_tree, tips)
-  tmp <- multi2di(tmp)
-  speciation_rate <- yule(as.phylo(tmp))$lambda
-  Pybus_gamma <- ltt(as.phylo(tmp), plot=FALSE, gamma=TRUE)$gamma ## Maybe also consider plottng full ltt as well?
-#  Ne <- calculateNe(as.phylo(tmp))
-#  Re <- calculateRe(Ne, conf.level = 0.95)
-  # Need calculateOster() in here somewhere
-  
-  TMRCA <- min(cluster$DATE, na.rm=T)
-  timespan <- max(cluster$DATE, na.rm=T) - min(cluster$DATE, na.rm=T)
-  cluster_origin <- cluster$birth_origin[1]
-  
-  ## Put distribution data into list of tables
-  distdata <- dplyr::select(cluster, parent, field, trait, DATE) %>%
-    dplyr::filter(parent != parent[1]) %>%
-    tidyr::drop_na() %>%
-    dplyr::select(-parent) %>%
-    dplyr::group_by(field) %>%
-    dplyr::group_split(.keep=T)
-
-  fields <- do.call(rbind, mclapply(distdata, function(x) {
-    paste(x$field[1])
-  }, mc.cores=numCores)) ## For some reason order is not the same as order of column names in metadata
-
-  names(distdata) <- fields
-  
-  ancdata <- dplyr::select(cluster, parent, field, trait) %>%
-    dplyr::filter(parent == parent[1]) %>%
-    dplyr::filter(!is.na(field)) %>%
-    dplyr::select(-parent) %>%
-    dplyr::group_by(field) %>%
-    dplyr::group_split()
-  
-  fields <- do.call(rbind, mclapply(ancdata, function(x) {
-    paste(x$field[1])
-  }, mc.cores=numCores)) ## For some reason order is not the same as order of column names in metadata
-  
-  names(ancdata) <- fields
-
-  ## Dynamics
-  dynamics <- list()
-  dynamics$birth <- NA
-  dynamics$death <- NA
-#  dynamics$rapid <- NA
-  if (isTRUE(!is.na(cluster$birth_origin[1]))) {
-    dynamics$birth <- "birth"
-  } else {dynamics$birth <- NA}
-  if (isTRUE(max(cluster$DATE) < num.mrsd-7/365)) {
-    dynamics$death <- "death"
-  } else {dynamics$death <- NA}
-  # if (isTRUE(Re$mean_Re[1] > Re_fulltree$mean_Re[1])) {
-  #   dynamics$rapid <- "rapid"
-  # } else {dynamics$rapid <- NA}
-  return(tibble::lst(distdata, ancdata, TMRCA, timespan, cluster_origin, speciation_rate, Pybus_gamma, dynamics))
+# Added tree statistics, but currently using machine learning to determine which of the following
+# are actually better predictors of cluster dynamics
+calculateNe <- function(tree) {
+  tree <- multi2di(tree)
+  res=round(max(nodeHeights(tree))/2) # Daily
+  fit <- tryCatch(skygrowth.map(tree, res=res, tau0=0.1), error=function(e) NULL)
+  p <- data.frame(time=max(nodeHeights(tree))-fit$time, nemed=fit$ne, ne_ci=fit$ne_ci)
+  return(p)
 }
-
-cluster_stats <- lapply(cluster_data, gatherStats)
-
-# Visualization is based on the resulting list (per cluster) of data
-
-write("Data are now being exported as 'cluster_data.RDS' and 'tree_data.tree.'")
-saveRDS(cluster_stats, "cluster_data.RDS")
-write.table(branch_length_limit, "branch_length_limit.txt")
-
-# test <- cluster_list[[1]][[1]][[2]]
-# test$trait <- as.factor(test$trait)
-# ggplot(data=test, aes(x=date, color=trait)) +
-#   geom_histogram(aes(y=..count..))
-
-## Tree export
-
-exportTree <- function(time_tree, cluster_data) {
-  t.tbl <- as_tibble(time_tree)
-  t.tbl <- cbind(t.tbl, gg_tree$data$x) %>%
-    dplyr::rename("dates" = "gg_tree$data$x")
-  t.tbl$cluster_id <- NA
-  for (i in seq_along(cluster_data)) {
-    for (j in seq_along(t.tbl$node)) {
-      if (t.tbl$node[j] %in% cluster_data[[i]]$node) {
-        t.tbl$cluster_id[j] = names(cluster_data)[i]
-      } 
+calculateR0 <- function(Ne, conf.level=0.95) {
+  s <- 100 # sample size of 100
+  #  psi <- rnorm(s, 0.038, 0.014) #Duration of infection around 14 days
+  psi <- rnorm(s, 14, 5) #Duration of infection around 14 days -incubation period of 5 days
+  #  psi <- rnorm(s, 9, 5) #Duration of infection around 14 days -incubation period of 5 days
+  Z=qnorm(0.5*(1 + conf.level))
+  Re <- list()
+  if (isTRUE(nrow(Ne) >1)) {
+    for (i in 2:nrow(Ne)) {
+      time = Ne$time[i-1]
+      Re.dist = sample(1+psi*(Ne$nemed[i]-Ne$nemed[i-1])/((Ne$time[i]-Ne$time[i-1])*Ne$nemed[i-1]),
+                       size=s, replace=F)
+      logRe = log(Re.dist)
+      SElogRe = sd(logRe)/sqrt(s) # standard deviation of 2, sample size of 10
+      LCL = exp(mean(logRe) - Z*SElogRe)
+      UCL = exp(mean(logRe) + Z*SElogRe)
+      Re[[i-1]] <- data.frame(time = time, mean_Re=mean(Re.dist), conf.int=paste0("(", LCL, "," ,UCL, ")"))
+    }
+  } else {Re <- list(NULL)}
+  Re <- do.call("rbind",Re)
+  R0 <- Re$mean_Re[1]
+  return(R0)
+}
+calculateLTT <- function(tree) {
+  fit <- ltt(tree, plot=F)
+  df <- distinct(data.frame(ne=fit$ltt, time=fit$times))
+  df <- df[-1,]
+  df <- data.frame(x=df$time, y=df$ne)
+  
+  repeat {
+    i <- 2
+    while (i <= nrow(df)) {
+      if (isTRUE(df$x[i]==df$x[i-1])){
+        min_y <- min(df$y[i-1],df$y[i])
+        unwanted <- df[df$y== min_y & (df$x==df$x[i] | df$x==df$x[i-1]),]
+      } else{ unwanted <- data.frame(x=NA, y=NA)}
+      df <- setdiff(df, unwanted)
+      i <- i+1
+    }
+    if(length(unique(df$x))==length(df$x)) {
+      break
     }
   }
   
-  t.tbl$dates <- date_decimal(t.tbl$dates)
-  t.tbl$dates <- as.Date(t.tbl$dates)
-  t.tbl$label <- paste(t.tbl$label, t.tbl$dates, sep="|")
-  t.tbl <- dplyr::select(t.tbl, parent, node, branch.length, label, cluster_id) %>%
-    as_tibble()
-  class(t.tbl) = c("tbl_tree", class(t.tbl))
   
-  t2 <- as.treedata(t.tbl)
-  return(t2)
+  cc <- check_curve(df$x, log(df$y))$ctype
+  # if (cc=="convex") {
+  #   model="constant"
+  # } else {
+  #   if (cc=="concave") {
+  #     model="growth"
+  #   } else { model="mixed"}
+  # }
+  result <- data.frame()
+  return(cc)
 }
-exported_tree <- exportTree(time_tree, cluster_data)
-write.beast(exported_tree, "tree_data.tree")
+calculateGrowth <- function(cluster_Ne, total_r) {# modelNe_log <- function(Ne_df) {
+  cluster_df <- data.frame(x=cluster_Ne$time, y=cluster_Ne$nemed)
+  if (nrow(cluster_df) > 1) {
+    max_cluster_ne <- max(cluster_df$y, na.rm=T); min_cluster_ne <- min(cluster_df$y, na.rm=T)
+    max_cluster_t <- max(cluster_df$x, na.rm=T); min_cluster_t <- min(cluster_df$x, na.rm=T)
+    cluster_r = (max_cluster_ne-min_cluster_ne)/(max_cluster_t-min_cluster_t)
+    
+    relative_r <- cluster_r/total_r
+    
+    rmax <- list()
+    for (i in 2:nrow(cluster_df)) {
+      rmax[[i]] <- (cluster_df$y[i]-cluster_df$y[i-1])/(cluster_df$x[i]-cluster_df$x[i-1])
+    }
+    rmax <- max(do.call("rbind",rmax), na.rm=T)
+    
+    #Fraction of time spent in growth
+    max_cluster_t.ne <- cluster_df$x[cluster_df$y==max_cluster_ne]
+    t_frac <- (max_cluster_t.ne-min_cluster_t)/(max_cluster_t-min_cluster_t)
+  } else {
+    cluster_r <- NA
+    relative_r <- NA
+    t_frac <- NA
+    rmax <- NA
+  }
+  
+  result <- data.frame(abs_growth_rate=cluster_r, rel_growth_rate=relative_r, t_frac=t_frac, rmax=rmax)
+  return(result)
+}
+calculateGamma <- function(tree) {
+  tree <- multi2di(tree)
+  gamma <- gammaStat(tree)
+  return(gamma)
+}
+calculateOster <- function(tree) {
+  tree <- multi2di(tree)  
+  cluster_size <- length(tree$tip.label)-1
+  sum_heights <- sum(nodeHeights(tree))
+  longest <- max(nodeHeights(tree))
+  co <- cluster_size/sum_heights + longest
+  return(co)
+}
+timeData <- function(tree, clusters) {
+  sts <- distRoot(tree@phylo, tips = "all", method="patristic")
+  sts <- data.frame(time = sts, ID=names(sts))
+  assign("sts", setNames(sts$time, sts$ID), envir = globalenv())
+  
+  tbl_list <- mclapply(clusters, function(x) {
+    mrsd <- max(sts$time[sts$ID %in% x$tip.label], na.rm=T)
+    cluster_size <- length(x$tip.label)
+    root_age <- mrsd-max(nodeHeights(x))
+    x <- cbind(as_tibble(x), mrsd = mrsd,
+               cluster_size = cluster_size,
+               root_age = root_age 
+    )}, mc.cores=numCores) # End creation of tbl_list
+  
+  assign("tbl_list", tbl_list, envir = globalenv())
+  # clust_metadata <- rbindlist(tbl_list, fill=T) %>%
+  #   dplyr::select(-parent, -node, -branch.length) # No longer need parenta and node information, since not unique
+  # names(clust_metadata)[1] <- "ID"
+  
+  # sts_list <- mclapply(clusters, function(c) {
+  #   c <- sts[sts$ID %in% c$tip.label,]
+  #   c <- setNames(c$time, c$ID)
+  # }, mc.cores=numCores)
+  # 
+  # return(sts_list)
+}
+calculateNeeBD <- function(tree) {
+  tree <- multi2di(tree)
+  #tree = prune.extinct.taxa(tree)
+  fit.bd <- tryCatch(birthdeath(tree), error=function(e) NULL)
+  if (!is.null(fit.bd)) {
+    b <- bd(fit.bd)[1]
+  } else {
+    b <- NULL
+  }
+  return(b)
+}
+calculatePD <- function(tree) {
+  tree <- multi2di(tree)
+  pd <- sum(tree$edge.length)
+  return(pd)
+}
+calculateCC <- function(tree) {
+  tree <- multi2di(tree)
+  out <- capture.output(
+    tryCatch(cherry(tree), error=function(e) NULL)
+  )
+  ntips <- as.numeric(gsub("Number of tips\\: ([0-9]+) ", "\\1", out[5]))
+  ncherries <- as.numeric(gsub("Number of cherries\\: ([0-9]+) ", "\\1", out[6]))
+  cpn <- ncherries/ntips
+  return(cpn)
+}
+
+
+
+gatherStats <- function(time_tree, clusters_time_tree, clusters_sub_tree) {
+  total_Ne <- calculateNe(time_tree)
+#  total_gamma <- calculateGamma(time_tree)
+#  total_NeeBD <- calculateNeeBD(time_tree)
+#  total_oster <- calculateOster(sub_tree)
+#  total_PD <- calculatePD(sub_tree)
+  
+  total_df <- data.frame(x=total_Ne$time, y=total_Ne$nemed)
+  max_total_ne <- max(total_df$y); min_total_ne <- min(total_df$y)
+  max_total_t <- total_df$x[total_df$y==max_total_ne]; min_total_t <- min(total_df$x)
+  total_r = (max_total_ne-min_total_ne)/(max_total_t-min_total_t)
+  
+  cluster_Ne <- mclapply(clusters_time_tree, calculateNe, mc.cores=numCores)
+  cluster_R0 <- mclapply(cluster_Ne, calculateR0, conf.level=0.95, mc.cores=numCores)
+  cluster_gamma <- mclapply(clusters_time_tree, calculateGamma, mc.cores=numCores)
+  cluster_growth_rates <- mclapply(cluster_Ne, function(x) {
+    calculateGrowth(x, total_r)}, mc.cores=numCores)
+  cluster_ltt_shape <- mclapply(clusters_time_tree, calculateLTT, mc.cores=numCores)
+  cluster_NeeBD <- mclapply(clusters_time_tree, calculateNeeBD, mc.cores=numCores)
+  cluster_cherries <- mclapply(clusters_sub_tree, calculateCC, mc.cores=numCores)
+  cluster_oster <- mclapply(clusters_sub_tree, calculateOster, mc.cores=numCores)
+  cluster_PD <- mclapply(clusters_sub_tree, calculatePD, mc.cores=numCores)
+  
+  ## Populate cluster_dynamics table
+  cluster_dynamics <- rep(list(data.frame(gamma = as.numeric(NA),
+                                 R0 = as.numeric(NA),
+                                 birth_rate = as.numeric(NA),
+                                 #rel_birth_rate = as.numeric(NA),
+                                 abs_growth_rate = as.numeric(NA),
+                                 #rel_growth_rate = as.numeric(NA),
+                                 r_max = as.numeric(NA),
+                                 fraction_time_growth = as.numeric(NA),
+                                 oster = as.numeric(NA),
+                                 PD = as.numeric(NA),
+                                 #rel_PD = as.numeric(NA),
+                                 ltt_shape = as.character(NA),
+                                 cherries = as.character(NA))),
+                          length(clusters))
+  
+  for (i in seq_along(cluster_dynamics)) {
+    cluster_dynamics[[i]]$gamma <- cluster_gamma[[i]]
+    cluster_dynamics[[i]]$oster <- cluster_oster[[i]]
+    cluster_dynamics[[i]]$birth_rate <- cluster_NeeBD[[i]]
+    #cluster_dynamics[[i]]$rel_birth_rate <- cluster_NeeBD[[i]]/total_NeeBD
+    cluster_dynamics[[i]]$PD <- cluster_PD[[i]]
+    #cluster_dynamics[[i]]$rel_PD <- cluster_PD[[i]]/total_PD
+    cluster_dynamics[[i]]$R0 <- cluster_R0[[i]]
+    cluster_dynamics[[i]]$abs_growth_rate <- cluster_growth_rates[[i]]$abs_growth_rate
+    #cluster_dynamics[[i]]$rel_growth_rate <- cluster_growth_rates[[i]]$rel_growth_rate
+    cluster_dynamics[[i]]$fraction_time_growth <- cluster_growth_rates[[i]]$t_frac
+    cluster_dynamics[[i]]$r_max <- cluster_growth_rates[[i]]$rmax
+    cluster_dynamics[[i]]$ltt_shape <- cluster_ltt_shape[[i]]
+    cluster_dynamics[[i]]$cherries <- as.numeric(cluster_cherries[[i]])
+  }
+  
+  names(cluster_dynamics) <- names(clusters)
+  cluster_dynamics <- dplyr::bind_rows(cluster_dynamics, .id = "cluster_id")
+  
+  return(cluster_dynamics)
+
+}
+
+cluster_tree_stats <- gatherStats(time_tree, clusters_time_tree, clusters_sub_tree)
+
+# Need to merge tree_stats with ASR data
+
+cluster_data <- dplyr::bind_rows(cluster_data, .id = "cluster_id") %>%
+  dplyr::filter(!is.na(DATE))
+
+cluster_info <- list(trait_distributions=cluster_data,
+                     tree_stats=cluster_tree_stats)
+
+# Transform sampled tree into a tbl object and assign cluster IDs to internal and external nodes found in list of clusters
+
+clusters.tbl <- dplyr::bind_rows(clusters, .id="cluster_id")
+tree.tbl <- as_tibble(time_tree)
+tree.tbl$cluster_id <- "Background"
+for (i in 1:nrow(clusters.tbl)) {
+  for (j in 1:nrow(tree.tbl)) {
+    if (isTRUE(tree.tbl$parent[j] == clusters.tbl$parent[i])) {
+      tree.tbl$cluster_id[j] = clusters.tbl$cluster_id[i]
+    } # End if statement
+  } # end loop along tree
+} # End loop along cluster_data
+
+
+#sampled.tree$label <- paste(sampled.tree$label, sampled.tree$state, sampled.tree$date, sep="|")
+# sampled.tree <- dplyr::select(sampled.tree, parent, node, branch.length, label, cluster_id) %>%
+#   as_tibble()
+class(tree.tbl) = c("tbl_tree", class(tree.tbl))
+t2 <- as.treedata(tree.tbl)
+
+write("Data are now being exported as 'cluster_info_<tree>.RDS' and 'dynamite_<tree>.tree.'")
+saveRDS(cluster_info, paste0("cluster_info_", opt$tree, ".RDS"))
+write.table(branch_length_limit, paste0("branch_length_limit_", opt$tree, ".txt"))
+write.beast(t2, paste0("dynamite_", opt$tree, ".tree")) #### NEED THIS OUTPUT####################################
+
+## Combined results
+
 
 rt1 <- Sys.time()
 rt1-rt0
