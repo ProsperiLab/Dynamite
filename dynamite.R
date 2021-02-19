@@ -9,7 +9,7 @@ rt0 <- Sys.time()
 # List of packages for session
 .packages <-  c("optparse", "remotes", "phytools", "data.tree", 
                 "tidytree", "lubridate", "rlist", "familyR", "tidyverse", 
-                "ggtree", "parallel", "geiger", "tibble")  # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
+                "ggtree", "parallel", "geiger", "tibble", "treedater")  # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
 github_packages <- c("mrc-ide/skygrowth") # "tothuhien/Rlsd2", "mdkarcher/phylodyn" may need to be done if we think our Re values are going to be greater than 5 for any cluster! If the latter, need aslo install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 
 ## Will need to remove install section if using on cluster ###################################
@@ -37,9 +37,9 @@ option_list = list(
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= dynamite]", metavar="character"),
   make_option(c("-l", "--leaves"), type="character", default="addLeaves", 
               help="choice of transformation to tree from bifurcating or addLeaves [default=addLeaves]", metavar="character"),
-  make_option(c("-r", "--range"), type="numeric", default=30, 
-              help="range of branch length thresholds to try [default=30", metavar="numeric"),
-  make_option(c("-a", "--asr"), type="character", default="Y", 
+  make_option(c("-r", "--range"), type="numeric", default=100, 
+              help="range of branch length thresholds to try [default=100", metavar="numeric"),
+  make_option(c("-a", "--asr"), type="character", default="N", 
               help="option of ancestral state reconstruction for each cluster [default= Y]", metavar="character")
  ); 
 
@@ -71,7 +71,10 @@ write("Checking for tree file...")
 checkFortree <- function(tree_file) {
   print("Make sure tree_file is scaled in substitutions/site and not in units of time.")
   # Check tree_file format -- either Newick or Nexus -- using suffices
-  if (endsWith(tree_file, "nwk") || endsWith(tree_file,"newick") || endsWith(tree_file,"tree")){
+  if (endsWith(tree_file, "nwk") || 
+      endsWith(tree_file,"newick") || 
+      endsWith(tree_file,"tree") ||
+      endsWith(tree_file,"treefile" )){
     print(paste("Newick file detected:", tree_file, sep=" "), stderr())
     sub_tree <- read.tree(tree_file)
   } else if (endsWith(tree_file, "nex") || endsWith(tree_file,"nexus") || endsWith(tree_file, "nxs")){
@@ -87,23 +90,24 @@ checkFortree <- function(tree_file) {
 }# end checkfortree_file function
 sub_tree <- checkFortree(opt$tree)
 
-## Need to force binary tree and to replace zero branch lengths with full bootstrap support
-
-
 message("Searching for metadata file...")
 if(endsWith(opt$metadata, "csv")) {
-  metadata <- read.csv(opt$metadata, header=T, stringsAsFactors = F) %>%
-    dplyr::filter(ID %in% sub_tree$tip.label)
+  metadata <- read.csv(opt$metadata, header=T, stringsAsFactors = F)
 } else {
   if(endsWith(opt$metadata, "tab") | endsWith(opt$metadata, "txt")) {
-    metadata <- read.table(opt$metadata, sep='\t', header=T, stringsAsFactors = F) %>%
-      dplyr::filter(ID %in% sub_tree$tip.label)
-  } 
+    metadata <- read.table(opt$metadata, sep='\t', header=T, stringsAsFactors = F)
+  }
 }
 
-if(isTRUE("X" %in% colnames(metadata))) { # rownames can be added to metadata if csv file, so need to remove before creating table
-    metadata <- dplyr::select(metadata, -"X")
-  }    else {metadata <- metadata} 
+# If using GISAID data, tree reconstruction software may replace pipes with underscores
+# So need to find and replace
+if (isTRUE(any(grepl("\\|", metadata$ID))) &
+    !isTRUE(any(grepl("\\|", sub_tree$tip.label)))) {
+  metadata$ID <- gsub("\\|", "_", metadata$ID)
+  metadata$ID <- gsub("\\/", "_", metadata$ID)
+}
+
+metadata <- dplyr::filter(metadata, ID %in% sub_tree$tip.label)
 
 
 #Script will first use least squares dating approach developed by To et al. (2016) in the package Rlsd2 (https://github.com/tothuhien/lsd2) to 1) find the optimal root position in the tree and 2) remove outliers with longer-than-expected (penalized) branch lengths, and 3) output both a timed tree and rooted substitutions/site tree to the global environment (updates sub_tree).
@@ -249,7 +253,6 @@ define.clades(sub_tree)
 
 
 # Using a pre-order (root-to-tip) tree traversal, for each node, find subtrees/clades (>=3 nodes) for which cumulative mean branch, or edge, length is within the branch length limit at that level within the tree using the "branch-wise" algorithm, or "b". Note this should only be used with epidemics that are past the exponential phase of growth.
-
 # Alternatively, using a depth-first algorithm developed by Prosperi et al., (2011), find subtrees/clades (>=2 nodes) for which median pairwise patristic distances (MPPD) between nodes is within 1-5% of the distribution of MPPDs of clades within the entire tree. This is referred to as the "clade-wise algorithm", or "c".
 
 ## Functions used in DYNAMITE cluster-picking algorithm ############################################################################
@@ -606,26 +609,43 @@ if (opt$cluster == "b") {
 }
 
 
+message("Writing cluster (and background) trees to separate files...")
 clusterPhylo <- function(clusters, sub_tree, time_tree) {
-  clusters_time_tree <- mclapply(clusters, function(x) {
+
+    clusters_time_tree <- mclapply(clusters, function(x) {
     tips <- x$label[x$label %in% time_tree$tip.label]
     full_clade <- extract.clade(time_tree, findMRCA(time_tree, tips))
     cluster <- keep.tip(full_clade, tips) # Need to make sure not full clade, but only tips present in cluster
     return(cluster)
     }, mc.cores=numCores)
   assign("clusters_time_tree", clusters_time_tree, envir = globalenv() )
-  
+  for (i in seq_along(clusters_sub_tree)) {
+    write.tree(clusters_sub_tree, paste0(names(clusters_sub_tree)[i], "_timetree_", opt$tree, ".tree"))
+  }
+    
   clusters_sub_tree <- mclapply(clusters, function(x) {
     tips <- x$label[x$label %in% sub_tree$tip.label]
     full_clade <- extract.clade(sub_tree, findMRCA(sub_tree, tips))
     cluster <- keep.tip(full_clade, tips) # Need to make sure not full clade, but only tips present in cluster
     return(cluster)
   }, mc.cores=numCores)
-
-#  clusters_sub_tree <- mclapply(clusters, as.phylo, mc.cores=numCores)
   assign("clusters_sub_tree", clusters_sub_tree, envir = globalenv() )
+  for (i in seq_along(clusters_sub_tree)) {
+    write.tree(clusters_sub_tree, paste0(names(clusters_sub_tree)[i], "_subtree_", opt$tree, ".tree"))
+  }
 }
 clusterPhylo(clusters, sub_tree, time_tree)
+
+
+unclusteredPhylo <- function(clusters_sub_tree, sub_tree) {
+  cluster_tips <- do.call(rbind, mclapply(clusters_sub_tree, function(x) {
+    x$tip.label
+  }, mc.cores=numCores))
+  background <- drop.tip(sub_tree, cluster_tips)
+  return(background)
+}
+background <- unclusteredPhylo(clusters_sub_tree, sub_tree)
+write.tree(background, paste0("Background_tree", opt$tree, ".tree"))
 
 #Employ ancestral state reconstruction of traits (optional)
 
@@ -719,7 +739,6 @@ anc.states <- mclapply(anc.states, function(x) {
 return(anc.states)
 } # End asrClusters function on traits
 
-write("Performinc ancestral state reconstruction...")
 if (opt$asr == "Y"){
 write("ASR performed using the empirical Bayesian method.")
   asr <- ancStateRecon(sub_tree, metadata) #traits
@@ -1049,8 +1068,8 @@ cluster_tree_stats <- gatherStats(time_tree, clusters_time_tree, clusters_sub_tr
 cluster_data <- dplyr::bind_rows(cluster_data, .id = "cluster_id") %>%
   dplyr::filter(!is.na(DATE))
 
-cluster_info <- list(trait_distributions=cluster_data,
-                     tree_stats=cluster_tree_stats)
+# cluster_info <- list(trait_distributions=cluster_data,
+#                      tree_stats=cluster_tree_stats)
 
 # Transform sampled tree into a tbl object and assign cluster IDs to internal and external nodes found in list of clusters
 
@@ -1073,7 +1092,9 @@ class(tree.tbl) = c("tbl_tree", class(tree.tbl))
 t2 <- as.treedata(tree.tbl)
 
 write("Data are now being exported as 'cluster_info_<tree>.RDS' and 'dynamite_<tree>.tree.'")
-saveRDS(cluster_info, paste0("cluster_info_", opt$tree, ".RDS"))
+#saveRDS(cluster_info, paste0("cluster_info_", opt$tree, ".RDS"))
+write.csv(select(cluster_data, -parent, -node), paste0("trait_distributions_", opt$tree, ".csv"))
+write.csv(cluster_tree_stats, paste0("tree_stats_", opt$tree, ".csv"))
 write.table(branch_length_limit, paste0("branch_length_limit_", opt$tree, ".txt"))
 write.beast(t2, paste0("dynamite_", opt$tree, ".tree")) #### NEED THIS OUTPUT####################################
 
