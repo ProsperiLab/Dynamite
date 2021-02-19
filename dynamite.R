@@ -585,9 +585,11 @@ if (opt$cluster == "b") {
   branch_length_limit <- branch_length_limit[which(nclust==best)]
   
   if (length(clusters)>1) {
-    clusters <- last(clusters)[[1]]
+    clusters <- last(clusters)
+    branch_length_limit <- last(branch_length_limit)
   } else {
     clusters <- clusters[[1]]
+    branch_length_limit <- branch_length_limit
   }
 } else {
   if (opt$cluster == "c") {
@@ -1068,38 +1070,33 @@ cluster_tree_stats <- gatherStats(time_tree, clusters_time_tree, clusters_sub_tr
 cluster_data <- dplyr::bind_rows(cluster_data, .id = "cluster_id") %>%
   dplyr::filter(!is.na(DATE))
 
-# cluster_info <- list(trait_distributions=cluster_data,
-#                      tree_stats=cluster_tree_stats)
+message("Annotating trees with cluster assignments...")
 
-# Transform sampled tree into a tbl object and assign cluster IDs to internal and external nodes found in list of clusters
+TreeAnno <- function(tree, clusters) {
+  clusters.tbl <- dplyr::bind_rows(clusters, .id="cluster_id")
+  tree.tbl <- as_tibble(tree)
+  tree.tbl$cluster_id <- "Background"
+  for (i in 1:nrow(clusters.tbl)) {
+    for (j in 1:nrow(tree.tbl)) {
+     if (isTRUE(tree.tbl$parent[j] == clusters.tbl$parent[i])) {
+        tree.tbl$cluster_id[j] = clusters.tbl$cluster_id[i]
+      } # End if statement
+    } # end loop along tree
+  } # End loop along cluster_data
+  class(tree.tbl) = c("tbl_tree", class(tree.tbl))
+  t2 <- as.treedata(tree.tbl)
+  return(t2)
+}
 
-clusters.tbl <- dplyr::bind_rows(clusters, .id="cluster_id")
-tree.tbl <- as_tibble(time_tree)
-tree.tbl$cluster_id <- "Background"
-for (i in 1:nrow(clusters.tbl)) {
-  for (j in 1:nrow(tree.tbl)) {
-    if (isTRUE(tree.tbl$parent[j] == clusters.tbl$parent[i])) {
-      tree.tbl$cluster_id[j] = clusters.tbl$cluster_id[i]
-    } # End if statement
-  } # end loop along tree
-} # End loop along cluster_data
-
-
-#sampled.tree$label <- paste(sampled.tree$label, sampled.tree$state, sampled.tree$date, sep="|")
-# sampled.tree <- dplyr::select(sampled.tree, parent, node, branch.length, label, cluster_id) %>%
-#   as_tibble()
-class(tree.tbl) = c("tbl_tree", class(tree.tbl))
-t2 <- as.treedata(tree.tbl)
+annotated_subtree <- TreeAnno(sub_tree, clusters)
+annotated_timetree <- TreeAnno(time_tree, clusters)
 
 write("Data are now being exported as 'cluster_info_<tree>.RDS' and 'dynamite_<tree>.tree.'")
-#saveRDS(cluster_info, paste0("cluster_info_", opt$tree, ".RDS"))
 write.csv(select(cluster_data, -parent, -node), paste0("trait_distributions_", opt$tree, ".csv"))
 write.csv(cluster_tree_stats, paste0("tree_stats_", opt$tree, ".csv"))
 write.table(branch_length_limit, paste0("branch_length_limit_", opt$tree, ".txt"))
-write.beast(t2, paste0("dynamite_", opt$tree, ".tree")) #### NEED THIS OUTPUT####################################
-
-## Combined results
-
+write.beast(annotated_subtree, paste0("dynamite_subtree_", opt$tree, ".tree")) #### NEED THIS OUTPUT####################################
+write.beast(annotated_timetree, paste0("dynamite_timetree_", opt$tree, ".tree")) #### NEED THIS OUTPUT####################################
 
 rt1 <- Sys.time()
 rt1-rt0
