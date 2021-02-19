@@ -9,7 +9,7 @@ rt0 <- Sys.time()
 # List of packages for session
 .packages <-  c("optparse", "remotes", "phytools", "data.tree", 
                 "tidytree", "lubridate", "rlist", "familyR", "tidyverse", 
-                "ggtree", "parallel", "geiger", "tibble", "treedater")  # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
+                "ggtree", "treeio", "parallel", "geiger", "tibble", "treedater")  # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
 github_packages <- c("mrc-ide/skygrowth") # "tothuhien/Rlsd2", "mdkarcher/phylodyn" may need to be done if we think our Re values are going to be greater than 5 for any cluster! If the latter, need aslo install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 
 ## Will need to remove install section if using on cluster ###################################
@@ -371,6 +371,7 @@ branchLengthLimit <- function(tree, range) {
     # while(length(unique(do.call("rbind", branch_length_limit))) == 1){
     n <- range
     y0 <- rexp(n, 10)  # simulate exp. dist.
+    y0 <- y0[order(y0)]
     bl <- mclapply(y0, function(x) {
       quantile(distvec$MPPD, x)
     }, mc.cores=numCores)
@@ -512,7 +513,6 @@ branchWise <- function(tree, branch_length_limit, make_tree) {
     # }
     return(results)
   } # End function
-
   addLeaves <- function(tree, clusters) {
     sub_tree <- as_tibble(tree)
     x <- clusters  # Copy clusters list for ease
@@ -619,8 +619,8 @@ clusterPhylo <- function(clusters, sub_tree, time_tree) {
     return(cluster)
     }, mc.cores=numCores)
   assign("clusters_time_tree", clusters_time_tree, envir = globalenv() )
-  for (i in seq_along(clusters_sub_tree)) {
-    write.tree(clusters_sub_tree, paste0(names(clusters_sub_tree)[i], "_timetree_", opt$tree, ".tree"))
+  for (i in seq_along(clusters_time_tree)) {
+    write.tree(clusters_time_tree[[i]], paste0(names(clusters_time_tree)[i], "_timetree_", opt$tree, ".tree"))
   }
     
   clusters_sub_tree <- mclapply(clusters, function(x) {
@@ -631,17 +631,17 @@ clusterPhylo <- function(clusters, sub_tree, time_tree) {
   }, mc.cores=numCores)
   assign("clusters_sub_tree", clusters_sub_tree, envir = globalenv() )
   for (i in seq_along(clusters_sub_tree)) {
-    write.tree(clusters_sub_tree, paste0(names(clusters_sub_tree)[i], "_subtree_", opt$tree, ".tree"))
+    write.tree(clusters_sub_tree[[i]], paste0(names(clusters_sub_tree)[i], "_subtree_", opt$tree, ".tree"))
   }
 }
 clusterPhylo(clusters, sub_tree, time_tree)
 
 
 unclusteredPhylo <- function(clusters_sub_tree, sub_tree) {
-  cluster_tips <- do.call(rbind, mclapply(clusters_sub_tree, function(x) {
+  cluster_tips <- unlist(mclapply(clusters_sub_tree, function(x) {
     x$tip.label
   }, mc.cores=numCores))
-  background <- drop.tip(sub_tree, cluster_tips)
+    background <- drop.tip(sub_tree, cluster_tips)
   return(background)
 }
 background <- unclusteredPhylo(clusters_sub_tree, sub_tree)
