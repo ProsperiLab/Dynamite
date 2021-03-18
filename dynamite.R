@@ -278,9 +278,13 @@ merge.overlap.clust <- function(clusters) {
   copy <- clusters
   unwanted <- list()
   result <- list()
+  copy_in_tree <- list()
+  clust_in_tree <- list()
   for (ct in seq_along(clusters)) {
     for (cc in seq_along(copy)) {
-      if (isTRUE(sum(copy[[cc]]$to %in% clusters[[ct]]$to) > 0.1*length(copy[[cc]]$to)) &
+      copy_in_tree[[cc]] <- copy[[cc]]$to[copy[[cc]]$to %in% sub_tree$tip.label]
+      clust_in_tree[[ct]] <- clusters[[ct]]$to[clusters[[ct]]$to %in% sub_tree$tip.label]
+      if (isTRUE(sum(copy_in_tree[[cc]] %in% clust_in_tree[[ct]]) > 0.1*length(copy_in_tree[[cc]])) &
           isTRUE(names(copy)[[cc]] != names(clusters)[[ct]])) {
         unwanted[[cc]] <- copy[[cc]]
         clusters[[ct]] <- full_join(copy[[cc]], clusters[[ct]], by=c("from", "to", "branch.length", "label"))
@@ -567,10 +571,12 @@ phylopart <- function(tree, branch_length_limit) {
     } else{NULL}
   }
   clusters <- compact(clusters) %>%
-    #    merge.nested.clust() %>%
-    # merge.overlap.clust() %>% # Will not work well with support in labels
-    # merge.nested.clust() %>%
-    list.filter(length(label) >= 3)
+    merge.nested.clust() %>%
+    merge.overlap.clust() %>%
+    merge.nested.clust()
+    
+	clusters <-  list.filter(clusters, sum(label %in% tree$tip.label) >= 5)
+
   return(clusters)
 }
 
@@ -578,6 +584,7 @@ phylopart <- function(tree, branch_length_limit) {
 message("Picking clusters based on user choice of algorithm....")
 branch_length_limit <- branchLengthLimit(sub_tree, opt$range)
 if (opt$cluster == "b") {
+  message("DYNAMITE's branchwise algorithm is being used.")
   possible_clusters <- mclapply(branch_length_limit, function(x) branchWise(sub_tree, x, make_tree=opt$leaves), mc.cores = numCores)
   nclust <- mclapply(possible_clusters, length, mc.cores=numCores)
   best <- max(do.call("rbind", nclust))
@@ -593,6 +600,7 @@ if (opt$cluster == "b") {
   }
 } else {
   if (opt$cluster == "c") {
+    message("DYNAMITE's cladewise algorithm (Phylopart) is being used.")
     possible_clusters <- mclapply(branch_length_limit, function(x) phylopart(sub_tree, x), mc.cores = numCores)
     nclust <- mclapply(possible_clusters, length, mc.cores=numCores)
     best <- max(do.call("rbind", nclust))
@@ -639,21 +647,23 @@ clusterPhylo <- function(clusters, sub_tree, time_tree) {
 clusterPhylo(clusters, sub_tree, time_tree)
 
 
-unclusteredPhylo <- function(clusters_sub_tree, sub_tree) {
+unclusteredPhylo <- function(clusters_sub_tree, sub_tree, time_tree) {
   cluster_tips <- unlist(mclapply(clusters_sub_tree, function(x) {
     x$tip.label
   }, mc.cores=numCores))
-    background <- drop.tip(sub_tree, cluster_tips)
-  return(background)
+    background_subtree <- drop.tip(sub_tree, cluster_tips)
+    assign("background_subtree", background_subtree, envir = globalenv() )
+    write.tree(background_subtree, file=paste0("background_subtree_", Sys.Date(), ".tree"))
+    background_timetree <- drop.tip(time_tree, cluster_tips)
+    write.tree(background_timetree, file=paste0("background_timetree_", Sys.Date(), ".tree"))
 }
-background <- unclusteredPhylo(clusters_sub_tree, sub_tree)
-write.tree(background, paste0("Background_tree", opt$tree, ".tree"))
+unclusteredPhylo(clusters_sub_tree, sub_tree, time_tree)
 
 #Employ ancestral state reconstruction of traits (optional)
 
 ancStateRecon <- function(tree, metadata) {
 ## The element lik.anc gives us the marginal ancestral states, also known as the 'empirical Bayesian posterior probabilities.'
-write("Estimating likelihood of ancestral states...", stderr())
+message("Estimating likelihood of ancestral states...", stderr())
 feed.mode <- list()
 fitER <- list()
 ## set zero-length branches to be 1/1000000 total tree length
@@ -742,19 +752,19 @@ return(anc.states)
 } # End asrClusters function on traits
 
 if (opt$asr == "Y"){
-write("ASR performed using the empirical Bayesian method.")
+message("ASR performed using the empirical Bayesian method.")
   asr <- ancStateRecon(sub_tree, metadata) #traits
 } else {
   if (opt$asr == "N"){
-  write("ASR not performed - results will rely on sampled data only.")
+  message("ASR not performed - results will rely on sampled data only.")
 } else {
-  write("Correct response not detected.")
+  message("Correct response not detected.")
 }
 }
   
 
 # Data manipulation for characterization of clusters and export of data for visualization
-write("Performing quick data manipulation... Hold on to your butts!")
+message("Performing quick data manipulation... Hold on to your butts!")
 ## Merge metadata with cluster data
 dataManip <- function(clusters) {
 
@@ -815,6 +825,7 @@ return(cluster_data)
 cluster_data <- dataManip(clusters)
 
 ## Now DYNAMITE determines if clusters are related by connecting the children of each cluster to the root of remaining clusters
+message("Determining if clusters related by birth...")
 connectClust <- function(sub_tree, cluster_data) {
   
   cluster_data <- cluster_data
