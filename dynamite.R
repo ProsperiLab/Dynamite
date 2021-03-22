@@ -606,7 +606,7 @@ if (opt$cluster == "b") {
     best <- max(do.call("rbind", nclust))
     clusters <- possible_clusters[which(nclust==best)]
     if (length(clusters)>1) {
-      clusters <- last(clusters)[[1]]
+      clusters <- last(clusters)
     } else {
       clusters <- clusters[[1]]
     }
