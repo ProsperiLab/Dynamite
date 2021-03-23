@@ -1,6 +1,10 @@
 # DYNAMITE (BETA)
 DYNAMic Identification of Transmission Epicenters within phylogenies
 
+## Description
+
+DYNAMITE is a depth-first search algorithm that is not restricted to monophyletic clades, allowing for improved sensitivity to the detection of dynamic, minimal evolution chains (MECs) that comprise transmission patterns of interest for public health relevance. A more detailed description of the DYNAMITE algorithm and its applications can be found at https://www.biorxiv.org/content/10.1101/2021.01.21.427647v1.
+
 **This project is still in beta and as such may contain major bugs and we do not guarantee proper results/functionality**
 
 ## Requirements
