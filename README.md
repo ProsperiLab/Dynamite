@@ -37,7 +37,6 @@ Additionally, a metadata file with sampling dates and traits of interest is requ
 --metadata (-m) = path to metadata file [default= .tab file]
 --seqLen (-s)  = sequence length [default=10000]
 --cluster (-c) = choice of cluster algorithm from 'c' (Phylopart's cladewise) or 'b' (DYNAMITE's branchwise) [default= b]
---leaves (-l) = choice of transformation of phylogenetic cluster nodes to phylo format through forced bifurcation ("bifurcate"), addition of leaves ("addLeaves"), or extraction of the entire associated clade ("pullClade"). This option is only used for the branchwise cluster-picking algorithm so default is empty ([default= ""]
 --range (-r) = range of branch length threshold quantiles used to determine the optimal cluster branch length threshold [default=30]
 --asr (-asr) = option of ancestral state reconstruction for each cluster [default= N]
 ```
@@ -65,7 +64,6 @@ DYNAMITE will result in the following output:
 "result_data.rds" file containing the following information for each cluster:
 
 *	metadata distributions over time
-*	metric calculated from fraction of time spent in growth phase * growth rate
 *	tree statistics (e.g., Pybus's gamma, yule)
 *	relevant values (e.g., R0, TMRCA, timespan)
 
