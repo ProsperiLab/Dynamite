@@ -116,11 +116,11 @@ write("Converting substitution tree into timed tree using lsd2 and dates provide
 checkForDates <- function(metadata) {
   for (i in seq_along(colnames(metadata))) {
     if (tryCatch({
-      isTRUE(any(grepl("id", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
+      isTRUE(any(grepl("^id", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
       colnames(metadata)[i] <- "ID"
     } #end first ef statement
     if (tryCatch({
-      isTRUE(any(grepl("date", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
+      isTRUE(any(grepl("date$", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
       colnames(metadata)[i] <- "DATE"
     } # End second if statement
   } # End for loop
@@ -388,49 +388,7 @@ branchLengthLimit <- function(tree, range) {
   return(branch_length_limit)
   
 }
-branchWise <- function(tree, branch_length_limit, make_tree) {
-  #   findThreshold <- function(tree) {
-  #     sub_tree <- as.phylo(tree)
-  #     
-  #     sub_tree <- multi2di(sub_tree)
-  # #    fit <- tryCatch(skygrowth.map(sub_tree, res=round(180/7)), error=function(e) NULL)
-  # #    p <- data.frame(time=fit$time, nemed=fit$ne)
-  # #    fit <- fit_easylinear(p$time, p$nemed, quota=0.99) #Foound this to be the best, except when prob_exit and p_trans are both high
-  # #    plot(fit)
-  # #    time_epi_peak <- max(nodeHeights(sub_tree, root.edge=TRUE)) - min(fit@fit$model$x)
-  #     
-  #     
-  #     
-  #      b0 <- BNPR(multi2di(tree))
-  #      plot_BNPR( b0 )
-  #      p <- data.frame(time=rev(b0$summary$time), ne=b0$summary$mean)
-  #      mL <- try(drm(data=p, ne~time, fct = LL.3(), type = "continuous"), silent=T)
-  #      p2 <- plot(mL)
-  #      
-  #     # dY <- diff(p2$`1`)/diff(p2$time)  # the derivative of your function
-  #     # dX <- rowMeans(embed(p2$time,2)) # centers the X values for plotting
-  #     # plot(dX,dY,type="l",main="Derivative") #check
-  #     # d1 <- data.frame(x=dX, y=dY)
-  #     # 
-  #     # time_epi_peak <- max(nodeHeights(tree, root.edge=TRUE)) - d1$x[which.max(d1$y)]
-  #     
-  #     fit <- fit_easylinear(p2$`time`, p2$`1`, quota=0.90) #Foound this to be the best, except when prob_exit and p_trans are both high
-  #     plot(fit)
-  # #    time_epi_peak <- max(nodeHeights(sub_tree, root.edge=TRUE)) - min(fit@fit$model$x)
-  #     time_epi_peak <- min(fit@fit$model$x)
-  #     
-  #     time.tree.exp <- paleotree::timeSliceTree(sub_tree, time_epi_peak)
-  #     #  bl_rescaled <- time.tree.exp$edge.length*(time_tree_data$mean.rate)
-  #     bl_rescaled <- time.tree.exp$edge.length
-  #     plot(density(bl_rescaled))
-  #     
-  #     branch_length_limit <- median(bl_rescaled) ## Ideally will need to multiply branch lengths by estimated rate.
-  #     #branch_length_limit <- mean(bl_rescaled) ## Ideally will need to multiply branch lengths by estimated rate. # Sometimes median works best
-  #     ## Maybe we should take both and whichever is larger?
-  #     #branch_length_limit <- mean(time.tree.exp$edge.length) + qnorm(.95)*(sd(time.tree.exp$edge.length)/sqrt(Ntip(time.tree.exp)))
-  #     
-  #     return(branch_length_limit)
-  #   } # End findThreshold()
+branchWise <- function(tree, branch_length_limit) {
   pickClust <- function(clade){
     
     ## Need to add mean_bl column  to original clade list
@@ -504,65 +462,40 @@ branchWise <- function(tree, branch_length_limit, make_tree) {
       return(sub_clade)
     }
   } # End pickClust function
-  bifurcate <- function(tree, clusters) {
-    results <- list()# Copy clusters list for ease
-    for (c in seq_along(clusters)) {
-      results[[c]] <- extract.clade(tree, clusters[[c]]$from[1])
-      results[[c]] <- drop.tip(results[[c]], subset(results[[c]]$tip.label, results[[c]]$tip.label %notin% clusters[[c]]$label),
-                               trim.internal = FALSE,
-                               collapse.singles = TRUE)
-    } #End loop along clusters
-    # for (j in seq_along(results)) {
-    #   names(results)[[j]] <- paste0("c", j)
-    # }
-    return(results)
-  } # End function
-  addLeaves <- function(tree, clusters) {
-    sub_tree <- as_tibble(tree)
-    x <- clusters  # Copy clusters list for ease
-    for (c in seq_along(x)) {
-      x[[c]] <- x[[c]] %>% dplyr::rename(parent=from, node=to) # comparison of clusters and subtree is based on same column names
-      for (node in 2:nrow(x[[c]])) {
-        if (length(x[[c]]$parent[x[[c]]$parent==x[[c]]$parent[node]]) == 1) { # For each row in a cluster, find parent nodes
-          ## that only have one edge (need two for downstream analysis)
-          p <- x[[c]]$parent[node]
-          n <- x[[c]]$node[node]
-          l <- as.data.frame(filter(sub_tree, parent == p & node != n)) ## Find the other edge in sub_tree
-          l$branch.length =
-            x[[c]]$branch.length[x[[c]]$parent == l$parent &
-                                   x[[c]]$node != l$node] ## Replace the current branch.length with the branch.length of the
-          ## other edge in the current list
-          x[[c]] <- rbind(x[[c]], l) ## Add the new edge to the current cluster
-        } # End if statement ## If no lonely edges, let the cluster list be itself
-      } # End loop along row
-    } # End loop along clusters
-    return(x)
-  } # End function; this added articial leaves to create bifurcating tree, but changed to the bifurcate f(x) above, which just involes dropping tips.
-  
-  #  branch_length_limit <- findThreshold(sub_tree)
-  
-  clusters <- mclapply(clades, pickClust, mc.cores=numCores) %>%
+  true_cluster_nodes <- mclapply(clades, pickClust, mc.cores=numCores) %>%
     compact() %>%
     merge.nested.clust() %>%
     merge.overlap.clust() %>%
     merge.nested.clust()
-  ## Remove singleton nodes (non-bifurcating branches) by using bifurcate() function or extracting entire clade.
-  
-  if (make_tree=="bifurcate") {
-    clusters <- list.filter(clusters, length(label) >= 4)
-    clusters <- bifurcate(tree, clusters)
-    clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
-  } else {
-      if (make_tree=="addLeaves") {
-        clusters <- addLeaves(tree, clusters)
-        clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
-    }
-  }
-  
-  clusters <-  list.filter(clusters, sum(label %in% tree$tip.label) >= 3)
-  
-  return(clusters)
+
+  true_cluster_nodes <- list.filter(true_cluster_nodes, length(label) >= 5)
+
+  return(true_cluster_nodes)
 }
+## Singleton nodes are likely, so will need original nodes to map onto tree (above), but will need to force bifurcation
+## for analysis by removing intermediate, lonely node.  
+bifurcate <- function(tree, clusters) {
+  x <- clusters  # Copy clusters list for ease
+  unwanted <- vector(mode="list", length=length(clusters))
+  for (c in seq_along(x)) {
+    x[[c]] <- x[[c]] %>% dplyr::rename(parent=from, node=to) # comparison of clusters and subtree is based on same column names
+    for (node in 2:nrow(x[[c]])) {
+      if (length(x[[c]]$parent[x[[c]]$parent==x[[c]]$parent[node]]) == 1) { # For each row in a cluster, find parent nodes
+        ## that only have one edge (need two for downstream analysis)
+        p <- x[[c]]$parent[node]
+        n <- x[[c]]$node[node]
+        pofp <- x[[c]]$parent[x[[c]]$node==p]
+        unwanted <- x[[c]][x[[c]]$parent==pofp & x[[c]]$node==p,]
+        
+        new_bl <- x[[c]]$branch.length[node] + x[[c]]$branch.length[x[[c]]$node==x[[c]]$parent[node]]
+        x[[c]]$parent[node] = pofp
+        x[[c]]$branch.length[node] = new_bl
+        x[[c]] <- setdiff(x[[c]], unwanted)
+      } # End if statement ## If no lonely edges, let the cluster list be itself
+    } # End loop along row
+  } # End loop along clusters
+  return(x)
+} # End function; 
 phylopart <- function(tree, branch_length_limit) {
   clusters <- list()
   for (clade in seq_along(clades)) {
@@ -575,8 +508,10 @@ phylopart <- function(tree, branch_length_limit) {
     merge.overlap.clust() %>%
     merge.nested.clust()
     
-	clusters <-  list.filter(clusters, sum(label %in% tree$tip.label) >= 5)
-
+  clusters <-  list.filter(clusters, sum(label %in% tree$tip.label) >= 3)
+  # for (j in seq_along(clusters)) {
+  #   names(clusters)[[j]] <- paste0("c", j)
+  # }
   return(clusters)
 }
 
@@ -585,19 +520,24 @@ message("Picking clusters based on user choice of algorithm....")
 branch_length_limit <- branchLengthLimit(sub_tree, opt$range)
 if (opt$cluster == "b") {
   message("DYNAMITE's branchwise algorithm is being used.")
-  possible_clusters <- mclapply(branch_length_limit, function(x) branchWise(sub_tree, x, make_tree=opt$leaves), mc.cores = numCores)
+  possible_clusters <- mclapply(branch_length_limit, function(x) branchWise(sub_tree, x), mc.cores = numCores) %>%
+    compact()
   nclust <- mclapply(possible_clusters, length, mc.cores=numCores)
   best <- max(do.call("rbind", nclust))
-  clusters <- possible_clusters[which(nclust==best)]
+  true_cluster_nodes <- possible_clusters[which(nclust==best)]
   branch_length_limit <- branch_length_limit[which(nclust==best)]
   
-  if (length(clusters)>1) {
-    clusters <- last(clusters)
+  if (length(true_cluster_nodes)>1) {
+    true_cluster_nodes <- last(true_cluster_nodes)
     branch_length_limit <- last(branch_length_limit)
   } else {
-    clusters <- clusters[[1]]
-    branch_length_limit <- branch_length_limit
+    true_cluster_nodes <- true_cluster_nodes[[1]]
+    branch_length_limit <- branch_length_limit[[1]]
   }
+  
+  clusters <- bifurcate(sub_tree, true_cluster_nodes)
+  clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
+
 } else {
   if (opt$cluster == "c") {
     message("DYNAMITE's cladewise algorithm (Phylopart) is being used.")
@@ -644,7 +584,7 @@ clusterPhylo <- function(clusters, sub_tree, time_tree) {
     write.tree(clusters_sub_tree[[i]], paste0(names(clusters_sub_tree)[i], "_subtree_", opt$tree, ".tree"))
   }
 }
-clusterPhylo(clusters, sub_tree, time_tree)
+clusterPhylo(true_cluster_nodes, sub_tree, time_tree)
 
 
 unclusteredPhylo <- function(clusters_sub_tree, sub_tree, time_tree) {
