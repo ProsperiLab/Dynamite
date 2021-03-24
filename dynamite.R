@@ -552,6 +552,8 @@ if (opt$cluster == "b") {
     }
     clusters <- mclapply(clusters, function(x) dplyr::rename(x, parent=from, node=to), mc.cores=numCores)
     branch_length_limit <- branch_length_limit[which(nclust==best)]
+    true_cluster_nodes <- clusters
+    
     
   } else {
     message("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")
