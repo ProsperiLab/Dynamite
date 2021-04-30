@@ -26,6 +26,7 @@ R 3.6.0 or higher
 * tibble
 * skygrowth
 * treedater
+* Rlsd2
 
 **File format requirements**
 
@@ -33,11 +34,13 @@ DYNAMITE takes a tree (scaled in substitutions/site) in newick or nexus format w
 
 Additionally, a metadata file with sampling dates and traits of interest is required. Column headers are needed. The first column must be named "id" and correspond to the taxa names, the second column must be named "date" and correspond to date information (must be consistently either numeric or Date format). Remaining columns can consist of any number of traits of interest. Specific header names are not required, as only the order is called.
 
+It is important to note that large trees (>30,000 sequences) cannot be scaled in time using the current implementation of treedater. While we have supplied a the least-squares dating function from Rlsd2 as an alternative, this function is also not entirely scaleable for large datasets. DYNAMITE has been successfule on datasets of up to 10,000 sequences, though we are continuing to search for improved options for larger datasets.
+
 ## Execution 
 
 ```R
 --help (-h) = provides helpful information for running DYNAMITE
---tree (-t) = path to treefile [default= .nwk file]
+--tree (-t) = path to treefile [no default]
 --metadata (-m) = path to metadata file [default= .tab file]
 --seqLen (-s)  = sequence length [default=10000]
 --cluster (-c) = choice of cluster algorithm from 'c' (Phylopart's cladewise) or 'b' (DYNAMITE's branchwise) [default= b]
@@ -65,7 +68,7 @@ DYNAMITE will result in the following output:
 
 ### Data Table
 
-"result_data.rds" file containing the following information for each cluster:
+"trait_distributions_<original tree name>.csv" file containing the following information for each cluster:
 
 *	metadata distributions over time
 *	tree statistics (e.g., Pybus's gamma, yule)
@@ -74,8 +77,19 @@ DYNAMITE will result in the following output:
 This file can be opened with \url{need info from NANA analytics} for interactive viewing.
 
  
-### Tree
-"result_tree.tree" containing a nexus timed tree file with annotated information regarding cluster association. This file is meant to be viewed alongside the result_data.rds in \url{need info from NANA analytics} but can also be opened in various alternative applications including (but not limited to) BEAST, Figtree, and NextStrain. Taxa in the tree have been modofied to supply sampling dates from metadata file following "|". 
+### Optimal branch length
+"branch_length_limit.txt" file containing the optimal threshold (% branch length distribution) and corresponding branch length
+
+### Trees
+"dynamite_subtree_<original tree name>.tree" containing a nexus tree file scaled in substitutions/site with annotated information regarding cluster association. 
+
+"dynamite_timetree_<original tree name>.tree" containing a nexus tree file scaled in substitutions/site with annotated information regarding cluster association. 
+
+
+These tree files can also be viewed alongside the output data table in \url{need info from NANA analytics} but can also be opened in various alternative applications including (but not limited to) BEAST, Figtree, and NextStrain. Taxa in the tree have been modofied to supply sampling dates from metadata file following "|". 
+
+### Run time
+For a single tree with 362 tips (see /simulations/ folder), the DYNAMITE branchwise algorithm completed in 5.571 seconds in R v4.0 on a MacBook Air (2 GHz Intel Core i7, 8GB).
 
 
 ## References
