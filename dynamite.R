@@ -11,7 +11,7 @@ rt0 <- Sys.time()
                 "tidytree", "lubridate", "rlist", "familyR", "tidyverse", 
                 "ggtree", "treeio", "parallel", "geiger", "tibble", "treedater",
                 "Rlsd2")  # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
-github_packages <- c("mrc-ide/skygrowth") # "tothuhien/Rlsd2", "mdkarcher/phylodyn" may need to be done if we think our Re values are going to be greater than 5 for any cluster! If the latter, need aslo install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
+github_packages <- c("mrc-ide/skygrowth", "GuangchuangYu/treeio") # "tothuhien/Rlsd2", "mdkarcher/phylodyn" may need to be done if we think our Re values are going to be greater than 5 for any cluster! If the latter, need aslo install.packages("INLA", repos=c(getOption("repos"), INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)
 
 ## Will need to remove install section if using on cluster ###################################
 # Install CRAN packages (if not already installed)
