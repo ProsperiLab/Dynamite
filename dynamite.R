@@ -15,9 +15,12 @@ github_packages <- c("mrc-ide/skygrowth") # "tothuhien/Rlsd2", "mdkarcher/phylod
 
 ## Will need to remove install section if using on cluster ###################################
 # Install CRAN packages (if not already installed)
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
 .inst <- .packages %in% installed.packages()
-if(length(.packages[!.inst]) > 0) install.packages(.packages[!.inst])
-.inst_github <- .packages %in% installed.packages()
+if(length(.packages[!.inst]) > 0) BiocManager::install(.packages[!.inst], type = "source", checkBuilt = TRUE)
+.inst_github <- .github_packages %in% installed.packages()
 ## Install GitHub packages(if not already installed)
 if(length(github_packages[!.inst_github]) > 0) try(remotes::install_github(github_packages[!.inst_github]))
 if(length(github_packages[!.inst_github]) > 0) try(devtools::install_github(github_packages[!.inst_github]))
