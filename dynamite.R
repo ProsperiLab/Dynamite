@@ -19,13 +19,13 @@ if("optparse" %in% installed.packages()) {
   make_option(c("-m", "--metadata"), type="character", default="*.csv",
               help="metadata file name [default= .csv extension]", metavar="character"),
   make_option(c("-q", "--timetree"), type="character", default="N", 
-              help="option (Y/N) to output a timed tree [default= N]", metavar="numeric"),
+              help="option (Y/N) for molecular clock calibration and time tree output/statistics [default= Y]", metavar="numeric"),
   make_option(c("-c", "--cluster"), type="character", default="b", 
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= dynamite]", metavar="character"),
   make_option(c("-l", "--threshold"), default=0.05, 
               help="threshold for cluster determination, which can be numeric or median [default= 0.05]", metavar="character"),
   make_option(c("-a", "--asr"), type="character", default="N", 
-              help="option of ancestral state reconstruction for each cluster [default= N]", metavar="character")
+              help="option (Y/N) of ancestral state reconstruction for each cluster [default= N]", metavar="character")
 )
 
 .opt_parser = OptionParser(option_list=.option_list)
@@ -134,14 +134,7 @@ metadata <- dplyr::filter(metadata, ID %in% sub_tree$tip.label)
 
 if(opt$timetree=="Y") {
   # If re-running and lsd2 results already exist in working directory, read them in here
-  lsd_files <- list.files(pattern="lsd2*") 
-  
-  if(length(lsd_files) >0) {
-    sub_tree <- read.beast("lsd2_results.nexus")@phylo
-    time_tree <- read.beast("lsd2_results.date.nexus")@phylo
-  } else {
-    print("Converting substitution tree into timed tree using either treedater or lsd2 and dates provided in metadata file. Please make sure the metadata file contains a column containing the word 'DATE'")
-    checkForDates <- function(metadata) {
+  checkForDates <- function(metadata) {
     
     if (tryCatch({
       isTRUE(any(grepl("date$", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
@@ -182,13 +175,23 @@ if(opt$timetree=="Y") {
     ## Will need sts in downstream analyses
     return(sts)
   } # End checkForDates function
-    sts <- checkForDates(metadata)
+  sts <- checkForDates(metadata)
   
+  lsd_files <- list.files(pattern="lsd2*") 
+  
+  if(length(lsd_files) >0) {
+    sub_tree <- read.beast("lsd2_results.nexus")@phylo
+    time_tree <- read.beast("lsd2_results.date.nexus")@phylo
+    
+    
+  } else {
+    print("Converting substitution tree into timed tree using either treedater or lsd2 and dates provided in metadata file. Please make sure the metadata file contains a column containing the word 'DATE'")
+
     #Script will first use least squares dating approach developed by To et al. (2016) in the package Rlsd2 (https://github.com/tothuhien/lsd2) to 1) find the optimal root position in the tree and 2) remove outliers with longer-than-expected (penalized) branch lengths, and 3) output both a timed tree and rooted substitutions/site tree to the global environment (updates sub_tree).
     # Function to convert sub_tree to time_tree
   
     DateTree <- function(sub_tree, seqLen) {
-    if(isTRUE(length(sub_tree$tip.label <= 5000))) {
+    if(isTRUE(length(sub_tree$tip.label <= 30000))) {
       result <- dater(sub_tree, decimal_date(sts), s=seqLen, ncpu=numCores, omega0=8E-04)
       assign("sub_tree", result$intree, envir=globalenv())
       assign("time_tree", as.phylo(as_tibble(result)), envir=globalenv())
@@ -840,31 +843,17 @@ calculatePD <- function(tree) {
 
 if (isTRUE(exists("time_tree", envir = globalenv()))) {
   print("Estimating infection rate for each cluster (Oster, 2018)")
-  timeData <- function(tree, clusters) {
-    sts <- distRoot(tree@phylo, tips = "all", method="patristic")
-    sts <- data.frame(time = sts, ID=names(sts))
-    assign("sts", setNames(sts$time, sts$ID), envir = globalenv())
+
+  timeData <- function(tree) {
+    timespan <- max(nodeHeights(tree))*365
+    mrsd <- max(sts[names(sts) %in% tree$tip.label], na.rm=T)
+    tmrca <- mrsd-timespan
+    size <- length(tree$tip.label)
+    df <- data.frame(timespan=timespan,
+                 size = size,
+                 tmrca = tmrca)
     
-    tbl_list <- mclapply(clusters, function(x) {
-      mrsd <- max(sts$time[sts$ID %in% x$tip.label], na.rm=T)
-      cluster_size <- length(x$tip.label)
-      root_age <- mrsd-max(nodeHeights(x))
-      x <- cbind(as_tibble(x), mrsd = mrsd,
-                 cluster_size = cluster_size,
-                 root_age = root_age 
-      )}, mc.cores=numCores) # End creation of tbl_list
-    
-    assign("tbl_list", tbl_list, envir = globalenv())
-    # clust_metadata <- rbindlist(tbl_list, fill=T) %>%
-    #   dplyr::select(-parent, -node, -branch.length) # No longer need parenta and node information, since not unique
-    # names(clust_metadata)[1] <- "ID"
-    
-    # sts_list <- mclapply(clusters, function(c) {
-    #   c <- sts[sts$ID %in% c$tip.label,]
-    #   c <- setNames(c$time, c$ID)
-    # }, mc.cores=numCores)
-    # 
-    # return(sts_list)
+    return(df)
   }
   calculateOster <- function(tree) {
     tree <- multi2di(tree)  
@@ -1029,10 +1018,23 @@ gatherStats <- function() {
   })
   
   if (isTRUE(exists("time_tree", envir = globalenv()))) {
-    overall_oster <- calculateOster(time_tree)
+    overall_time_data <- timeData(time_tree)
+    cluster_time_data <- mclapply(clusters_time_tree, timeData, mc.cores=numCores)
+    
+    timeoverall_oster <- calculateOster(time_tree)
     cluster_oster <- mclapply(clusters_time_tree, calculateOster, mc.cores=numCores)
   
   cluster_dynamics <- mclapply(cluster_dynamics, function(x) {
+    x$overall_tmrca = as.numeric(NA)
+    x$overall_size = as.numeric(NA)
+    x$overall_timespan = as.numeric(NA)
+    x$cluster_tmrca = as.numeric(NA)
+    x$cluster_size = as.numeric(NA)
+    x$cluster_timespan = as.numeric(NA)
+    
+    
+    
+    x$cluster_oster = as.numeric(NA)
     x$overall_oster = as.numeric(NA)
     x$cluster_oster = as.numeric(NA)
     #x$gamma = as.numeric(NA)
@@ -1052,6 +1054,14 @@ gatherStats <- function() {
   
   ## Populate cluster_dynamics table
   invisible(foreach (i = seq_along(cluster_dynamics)) %do% {
+    cluster_dynamics[[i]]$overall_tmrca <- overall_time_data$tmrca
+    cluster_dynamics[[i]]$overall_timespan <- overall_time_data$timespan
+    cluster_dynamics[[i]]$cluster_tmrca <- cluster_time_data[[i]]$tmrca
+    cluster_dynamics[[i]]$cluster_timespan <- cluster_time_data[[i]]$timespan
+    cluster_dynamics[[i]]$cluster_size <- cluster_time_data[[i]]$size
+    
+
+
     cluster_dynamics[[i]]$overall_oster <- overall_oster
     cluster_dynamics[[i]]$cluster_oster <- cluster_oster[[i]]
     #cluster_dynamics[[i]]$gamma <- cluster_gamma[[i]]

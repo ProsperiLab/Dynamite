@@ -16,42 +16,55 @@ R 3.6.0 or higher
 * remotes
 * phytools
 * data.tree
+* dplyr
 * tidytree
+* lubridate
 * rlist
 * familyR
 * tidyverse
 * ggtree
 * parallel
+* foreach
 * geiger
 * tibble
-* skygrowth
 * treedater
 * Rlsd2
+* treeio
 
 **File format requirements**
 
 DYNAMITE takes a tree (scaled in substitutions/site) in newick or nexus format with support values at the nodes. Support values can be provided by any (single) method - i.e., combined result of 2 or more methods will not be accepted. These values can be scaled from 0-1 or 0-100.
 
-Additionally, a metadata file with sampling dates and traits of interest is required. Column headers are needed. The first column must be named "id" and correspond to the taxa names, the second column must be named "date" and correspond to date information (must be consistently either numeric or Date format). Remaining columns can consist of any number of traits of interest. Specific header names are not required, as only the order is called.
+Additionally, a metadata file with sequence IDs, sampling dates, and traits of interest is required. Column headers are needed and must contain the strings "ID" and "Date" (specific case format not required). Date information must be consistently either numeric or Date format. Remaining columns can consist of any number of traits of interest.
 
-It is important to note that large trees (>30,000 sequences) cannot be scaled in time using the current implementation of treedater. While we have supplied a the least-squares dating function from Rlsd2 as an alternative, this function is also not entirely scaleable for large datasets. DYNAMITE has been successfule on datasets of up to 10,000 sequences, though we are continuing to search for improved options for larger datasets.
+It is important to note that large trees (>30,000 sequences) cannot be scaled in time using the current implementation of treedater. While we have supplied a the least-squares dating function from Rlsd2 as an alternative, this function is also not entirely scaleable for large datasets. DYNAMITE has been successful with datasets of up to 10,000 sequences, though we are continuing to search for improved options for larger datasets.
 
 ## Execution 
 
 ```R
 --help (-h) = provides helpful information for running DYNAMITE
---tree (-t) = path to treefile [no default]
---metadata (-m) = path to metadata file [default= .tab file]
---seqLen (-s)  = sequence length [default=10000]
+--tree (-t) = path to treefile [default = .nwk file]
+--metadata (-m) = path to metadata file [default= .csv file]
 --cluster (-c) = choice of cluster algorithm from 'c' (Phylopart's cladewise) or 'b' (DYNAMITE's branchwise) [default= b]
---range (-r) = range of branch length threshold quantiles used to determine the optimal cluster branch length threshold [default=30]
---asr (-asr) = option of ancestral state reconstruction for each cluster [default= N]
+--timetree (-q) = option (Y/N) for molecular clock calibration and time tree output/statistics [default=Y]
+--threshold (-l) = threshold for cluster determination, which can be numeric or "median" [default= 0.05]
+--asr (-asr) = option (Y/N) of ancestral state reconstruction for each cluster [default= N]
 ```
 
 **Important functions (with defaults):**
 
 ```R
-treedater::dater(tree, dates, s=seqLen, ncpu=numCores, omega0=8E-04)
+treedater::dater(tree, dates, s=1000, ncpu=numCores, omega0=8E-04)
+
+rlsd2::lsd2(inputTree=sub_tree,
+                     inputDate=decimal_date(sts),
+                     estimateRoot="as",
+                     constraint=TRUE,
+                     variance=1,
+                     ZscoreOutlier = 3,
+                     outFile = "lsd2_results",
+                     seqLen = seqLen,
+                     nullblen=-1
 
 branchwise()
 
@@ -71,8 +84,8 @@ DYNAMITE will result in the following output:
 "trait_distributions_<original tree name>.csv" file containing the following information for each cluster:
 
 *	metadata distributions over time
-*	tree statistics (e.g., Pybus's gamma, yule)
-*	relevant values (e.g., R0, TMRCA, timespan)
+*	tree statistics (Infection rate [Oster], phylogenetic diversity [PD])
+*	temporal information (TMRCA, timespan) if timetree option chosen
 
 This file can be opened with \url{need info from NANA analytics} for interactive viewing.
 
@@ -83,7 +96,7 @@ This file can be opened with \url{need info from NANA analytics} for interactive
 ### Trees
 "dynamite_subtree_<original tree name>.tree" containing a nexus tree file scaled in substitutions/site with annotated information regarding cluster association. 
 
-"dynamite_timetree_<original tree name>.tree" containing a nexus tree file scaled in substitutions/site with annotated information regarding cluster association. 
+"dynamite_timetree_<original tree name>.tree" containing a nexus tree file scaled in substitutions/site with annotated information regarding cluster association if the timetree option is chosen. 
 
 
 These tree files can also be viewed alongside the output data table in \url{need info from NANA analytics} but can also be opened in various alternative applications including (but not limited to) BEAST, Figtree, and NextStrain. Taxa in the tree have been modofied to supply sampling dates from metadata file following "|". 
