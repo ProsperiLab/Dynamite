@@ -14,12 +14,14 @@ if("optparse" %in% installed.packages()) {
 }
 
 .option_list = list(
-  make_option(c("-t", "--tree"), type="character",  default="*.nwk",
+  make_option(c("-t", "--tree"), type="character",  default=list.files(pattern="*.nwk"),
               help="tree file name [default= .nwk extension]", metavar="character"),
-  make_option(c("-m", "--metadata"), type="character", default="*.csv",
+  make_option(c("-m", "--metadata"), type="character", default=list.files(pattern="*.csv"),
               help="metadata file name [default= .csv extension]", metavar="character"),
-  make_option(c("-q", "--timetree"), type="character", default="N", 
+  make_option(c("-q", "--timetree"), type="character", default="Y", 
               help="option (Y/N) for molecular clock calibration and time tree output/statistics [default= Y]", metavar="numeric"),
+  make_option(c("-s", "--seqLen"), type="numeric", default=30000, 
+              help="sequnce length used in molecular clock calibration [default= 30000]", metavar="numeric"),
   make_option(c("-c", "--cluster"), type="character", default="b", 
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= dynamite]", metavar="character"),
   make_option(c("-l", "--threshold"), default=0.05, 
@@ -65,9 +67,10 @@ print(paste0("dynamite",
       " --tree ", opt$tree,
       " --metadata ", opt$metadata, 
       " --timetree ", opt$timetree,
+      " --seqLen ", opt$seqLen,
       " --cluster ", opt$cluster,
-      " --asr ", opt$asr,
-      " --threshold ", opt$threshold))
+      " --threshold ", opt$threshold,
+      " --asr ", opt$asr))
       
       
 # Additional options
@@ -101,7 +104,13 @@ checkFortree <- function(tree_file) {
     sub_tree <- read.tree(tree_file) ##Note: will not read in bracketed annotations!
   } else if (endsWith(tree_file, "tree")) {
     print("Annotated (e.g., BEAST) tree detected")
-    sub_tree <- read.beast(tree_file)@phylo ##Note: will not read in bracketed annotations!
+    sub_tree <- read.beast(tree_file)
+    sub_tree <- as_tibble(sub_tree)
+    sub_tree$label.x[is.na(sub_tree$label.x)] = ""
+    sub_tree$label.y[is.na(sub_tree$label.y)] = ""
+    sub_tree$label <- paste0(sub_tree$label.x, sub_tree$label.y)
+    sub_tree <- select(sub_tree, -label.x, -label.y)
+    sub_tree <- as.phylo(sub_tree)##Note: will not read in bracketed annotations!
   }  else {
     # Neither Newick nor Nexus identified -- stop
     print("Cannot identify tree_file format. Use nexus (nex,nxs,nexus), newick (nwk,newick), our BEAST output (tre, tree_files) formats.")
@@ -136,10 +145,12 @@ if(opt$timetree=="Y") {
   # If re-running and lsd2 results already exist in working directory, read them in here
   checkForDates <- function(metadata) {
     
-    if (tryCatch({
+    invisible(foreach (i=1:ncol(metadata)) %do% {
+      if (tryCatch({
       isTRUE(any(grepl("date$", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
       colnames(metadata)[i] <- "DATE"
     } # End  if statement
+    }) # End for loop
     assign("metadata", metadata, envir = globalenv())
     createSTS <- function(metadata) {
       date_range <- seq(as.Date("01/01/1900", "%d/%m/%Y"), as.Date(Sys.Date(), "%d/%m/%Y"), by="day")
@@ -177,7 +188,7 @@ if(opt$timetree=="Y") {
   } # End checkForDates function
   sts <- checkForDates(metadata)
   
-  lsd_files <- list.files(pattern="lsd2*") 
+  lsd_files <- list.files(pattern="lsd2*nexus") 
   
   if(length(lsd_files) >0) {
     sub_tree <- read.beast("lsd2_results.nexus")@phylo
@@ -191,7 +202,7 @@ if(opt$timetree=="Y") {
     # Function to convert sub_tree to time_tree
   
     DateTree <- function(sub_tree, seqLen) {
-    if(isTRUE(length(sub_tree$tip.label <= 30000))) {
+    if(isTRUE(length(sub_tree$tip.label) <= 30000)) {
       result <- dater(sub_tree, decimal_date(sts), s=seqLen, ncpu=numCores, omega0=8E-04)
       assign("sub_tree", result$intree, envir=globalenv())
       assign("time_tree", as.phylo(as_tibble(result)), envir=globalenv())
@@ -214,7 +225,7 @@ if(opt$timetree=="Y") {
       assign("tmrca", result$tMRCA, envir=globalenv())
     }
   }# End DateTree function
-    DateTree(sub_tree, 10000)
+    DateTree(sub_tree, opt$seqLen)
   
     # Function to specify most recent sampling date (mrsd)
     findMRSD <- function(time_tree) {
@@ -1021,7 +1032,7 @@ gatherStats <- function() {
     overall_time_data <- timeData(time_tree)
     cluster_time_data <- mclapply(clusters_time_tree, timeData, mc.cores=numCores)
     
-    timeoverall_oster <- calculateOster(time_tree)
+    overall_oster <- calculateOster(time_tree)
     cluster_oster <- mclapply(clusters_time_tree, calculateOster, mc.cores=numCores)
   
   cluster_dynamics <- mclapply(cluster_dynamics, function(x) {
@@ -1118,7 +1129,9 @@ if (isTRUE(exists("time_tree", envir = globalenv()))) {
 }
 
 write("Data are now being exported as 'cluster_info_<tree>.RDS' and 'dynamite_<tree>.tree.'")
-write.csv(select(cluster_data, -parent, -node), paste0("trait_distributions_", opt$tree, ".csv"), quote=F, row.names=F)
+write.csv(select(cluster_data, -parent, -node), paste0("dynamite_trait_distributions_", opt$tree, ".csv"), quote=F, row.names=F)
+write.csv(select(cluster_tree_stats, -parent, -node), paste0("dynamite_tree_stats", opt$tree, ".csv"), quote=F, row.names=F)
+
 #write.csv(cluster_tree_stats, paste0("tree_stats_", opt$tree, ".csv"))
 write.table(branch_length_limit, paste0("branch_length_limit.txt"), row.names=F, col.names = F)
 write.beast(annotated_subtree, paste0("dynamite_subtree_", opt$tree, ".tree")) #### NEED THIS OUTPUT####################################
