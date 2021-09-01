@@ -463,10 +463,12 @@ branchWise <- function(tree, branch_length_limit) {
     ## Creating matrix for pairwise differences in dates
     dates <- setNames(clade$DATE[!is.na(clade$DATE)], clade$label[!is.na(clade$DATE)])
     pw_date_mat <- as.matrix(dist(dates))
+    pw_date_mat[lower.tri(pw_date_mat)] <- NA
 
     ## Set initial values
     current_level <- as.numeric(2)
     current_mean_bl <- as.numeric(-Inf)
+    
 
     
     ## Initiate subclade using first two edges connected to root of clade (level=1)
@@ -491,8 +493,12 @@ branchWise <- function(tree, branch_length_limit) {
       #  2) not already IN the sub_clade
       new_node <- dplyr::setdiff(next_level_nodes, sub_clade)
       sub_clade <- rbind(sub_clade,new_node, fill=T)
-      
 
+      tmp_date_mat <- as.matrix(pw_date_mat[rownames(pw_date_mat) %in% sub_clade$label, colnames(pw_date_mat) %in% sub_clade$label])
+      colnames(tmp_date_mat) <- colnames(pw_date_mat)[colnames(pw_date_mat) %in% sub_clade$label]
+      rownames(tmp_date_mat) <- rownames(pw_date_mat)[rownames(pw_date_mat) %in% sub_clade$label]
+      
+      
       # The branch length is NOT calculated by the branch length of an individual
       # edges leading to nodes in the shortlist BUT on the mean of the nodes in the previous level
       # and added node.
@@ -506,14 +512,13 @@ branchWise <- function(tree, branch_length_limit) {
             length(c(sub_clade$branch.length[x],
                      subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))
           if(sub_clade$label[x] %in% sub_tree$tip.label) {
-            pair <- data.frame(to=sub_clade$label[x])
-            
-            sub_clade$mean_pwdate[x] <- mean(pw_date_mat[colnames(pw_date_mat) == sub_clade$label[x]])
+            n <- match(sub_clade$label[x],colnames(tmp_date_mat))
+            sub_clade$mean_pwdate[x] <- sum(tmp_date_mat[1:n,1:n], na.rm=T)/n*(n-1)
           } else {
             sub_clade$mean_pwdate[x] <- NA
           }
               }
-      })
+      }) # End for loop
       
       # Identify nodes with mean branch length > current mean branch length limit
       # and remove from shortlist
@@ -525,11 +530,11 @@ branchWise <- function(tree, branch_length_limit) {
       if (max(sub_clade$level)==current_level) {
         #current_mean_bl <- min(sub_clade$mean_bl[level=current_level])
         current_mean_bl <- mean(sub_clade$branch.length)
-        current_level <- current_level+1
       } else {
         current_mean_bl = Inf
-        current_level <- current_level+1
       } # End ifelse statement
+      current_level <- current_level+1
+      
     } # End tree traversal (while loop)
     }else {
       sub_clade <- NULL
@@ -1168,7 +1173,7 @@ if (isTRUE(exists("time_tree", envir = globalenv()))) {
 
 write("Data are now being exported as 'cluster_info_<tree>.RDS' and 'dynamite_<tree>.tree.'")
 write.csv(select(cluster_data, -parent, -node), paste0("dynamite_trait_distributions_", opt$tree, ".csv"), quote=F, row.names=F)
-write.csv(cluster_tree_stats, paste0("dynamite_tree_stats", opt$tree, ".csv"), quote=F, row.names=F)
+write.csv(cluster_tree_stats, paste0("dynamite_tree_stats_", opt$tree, ".csv"), quote=F, row.names=F)
 
 #write.csv(cluster_tree_stats, paste0("tree_stats_", opt$tree, ".csv"))
 write.table(branch_length_limit, paste0("branch_length_limit.txt"), row.names=F, col.names = F)
