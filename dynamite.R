@@ -25,7 +25,9 @@ if("optparse" %in% installed.packages()) {
   make_option(c("-c", "--cluster"), type="character", default="b", 
               help="choice of cluster algorithm from c (Phylopart's cladewise) or b (DYNAMITE's branchwise) [default= dynamite]", metavar="character"),
   make_option(c("-l", "--threshold"), default=0.05, 
-              help="threshold for cluster determination, which can be numeric or median [default= 0.05]", metavar="character"),
+              help="threshold for cluster determination, which can be numeric or median [default= 0.05]. Note that median is very computationally intense", metavar="character"),
+  make_option(c("-i", "--serial"), default=0.05, 
+              help="serial interval for cluster filtering [default= 4.5]", metavar="character"),
   make_option(c("-a", "--asr"), type="character", default="N", 
               help="option (Y/N) of ancestral state reconstruction for each cluster [default= N]", metavar="character")
 )
@@ -70,6 +72,7 @@ print(paste0("dynamite",
       " --seqLen ", opt$seqLen,
       " --cluster ", opt$cluster,
       " --threshold ", opt$threshold,
+      " --serial ", opt$serial,
       " --asr ", opt$asr))
       
       
@@ -104,13 +107,13 @@ checkFortree <- function(tree_file) {
     sub_tree <- read.tree(tree_file) ##Note: will not read in bracketed annotations!
   } else if (endsWith(tree_file, "tree")) {
     print("Annotated (e.g., BEAST) tree detected")
-    sub_tree <- read.beast(tree_file)
-    sub_tree <- as_tibble(sub_tree)
-    sub_tree$label.x[is.na(sub_tree$label.x)] = ""
-    sub_tree$label.y[is.na(sub_tree$label.y)] = ""
-    sub_tree$label <- paste0(sub_tree$label.x, sub_tree$label.y)
-    sub_tree <- select(sub_tree, -label.x, -label.y)
-    sub_tree <- as.phylo(sub_tree)##Note: will not read in bracketed annotations!
+    sub_tree <- read.beast(tree_file)@phylo
+#    sub_tree <- as_tibble(sub_tree)
+#    sub_tree$label.x[is.na(sub_tree$label.x)] = ""
+#    sub_tree$label.y[is.na(sub_tree$label.y)] = ""
+#    sub_tree$label <- paste0(sub_tree$label.x, sub_tree$label.y)
+#    sub_tree <- select(sub_tree, -label.x, -label.y)
+#    sub_tree <- as.phylo(sub_tree)##Note: will not read in bracketed annotations!
   }  else {
     # Neither Newick nor Nexus identified -- stop
     print("Cannot identify tree_file format. Use nexus (nex,nxs,nexus), newick (nwk,newick), our BEAST output (tre, tree_files) formats.")
@@ -428,7 +431,7 @@ branchLengthLimit <- function(tree, threshold) {
       if (isTRUE(as.numeric(threshold)==0.01)) {
         bl <- quantile(distvec$MPPD, as.numeric(threshold))
       } else {
-        bl <- runif(as.numeric(threshold)*100, 0, as.numeric(quantile(distvec$MPPD, as.numeric(threshold))))
+        bl <- runif(round(as.numeric(threshold)*100), 0, as.numeric(quantile(distvec$MPPD, as.numeric(threshold))))
       }
     }
     
@@ -443,23 +446,34 @@ branchLengthLimit <- function(tree, threshold) {
   
 }
 branchWise <- function(tree, branch_length_limit) {
+  
   pickClust <- function(clade){
     
     ## Need to add mean_bl column  to original clade list
     clade$mean_bl <- rep(Inf, nrow(clade))
+    clade$DATE=NA
+    invisible(foreach(i = 1:nrow(clade)) %do% {
+      if(clade$label[i] %in% sub_tree$tip.label) {
+        clade$DATE[i] =decimal_date(metadata$DATE[which(metadata$ID==clade$label[i])])
+      }
+    })
+    clade$mean_pwdate <- rep(NA, nrow(clade)) ################################################
     
     
+    ## Creating matrix for pairwise differences in dates
+    dates <- setNames(clade$DATE[!is.na(clade$DATE)], clade$label[!is.na(clade$DATE)])
+    pw_date_mat <- as.matrix(dist(dates))
+
     ## Set initial values
     current_level <- as.numeric(2)
     current_mean_bl <- as.numeric(-Inf)
-    
+
     
     ## Initiate subclade using first two edges connected to root of clade (level=1)
     sub_clade <- filter(clade, level==1,
                         branch.length <= branch_length_limit)
     
-    
-    
+    if (nrow(sub_clade) > 0) {
     while(isTRUE(current_mean_bl <= branch_length_limit)){
       
       # Create a vector of nodes sampled from the subsequent level
@@ -478,7 +492,7 @@ branchWise <- function(tree, branch_length_limit) {
       new_node <- dplyr::setdiff(next_level_nodes, sub_clade)
       sub_clade <- rbind(sub_clade,new_node, fill=T)
       
-      
+
       # The branch length is NOT calculated by the branch length of an individual
       # edges leading to nodes in the shortlist BUT on the mean of the nodes in the previous level
       # and added node.
@@ -491,12 +505,19 @@ branchWise <- function(tree, branch_length_limit) {
                                         subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))/
             length(c(sub_clade$branch.length[x],
                      subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))
-        }
+          if(sub_clade$label[x] %in% sub_tree$tip.label) {
+            pair <- data.frame(to=sub_clade$label[x])
+            
+            sub_clade$mean_pwdate[x] <- mean(pw_date_mat[colnames(pw_date_mat) == sub_clade$label[x]])
+          } else {
+            sub_clade$mean_pwdate[x] <- NA
+          }
+              }
       })
       
       # Identify nodes with mean branch length > current mean branch length limit
       # and remove from shortlist
-      unwanted_edges_at_current_level <- filter(sub_clade, level==current_level, mean_bl >= branch_length_limit)
+      unwanted_edges_at_current_level <- filter(sub_clade, level==current_level, mean_bl >= branch_length_limit | mean_pwdate >= opt$serial/365)
       sub_clade <- setdiff(sub_clade, unwanted_edges_at_current_level)
       
       ## Redefine current level and mean branch length, taking into account whether
@@ -508,27 +529,39 @@ branchWise <- function(tree, branch_length_limit) {
       } else {
         current_mean_bl = Inf
         current_level <- current_level+1
-      } # End ifelse statment
+      } # End ifelse statement
     } # End tree traversal (while loop)
-    if (nrow(sub_clade) == 0) {
-      return(NULL)
     }else {
+      sub_clade <- NULL
+      }
       return(sub_clade)
-    }
   } # End pickClust function
+  clades <- mclapply(clades, function(x) {
+    if(nrow(x) >=9) {
+      x <- x
+    } else {
+      x <- NULL
+    }
+    return(x)
+  }, mc.cores=numCores) %>%
+    compact() ## Filter search to only clades with at least 5 sampled individuals
   true_cluster_nodes <- mclapply(clades, pickClust, mc.cores=numCores) %>%
-    compact() %>%
-    merge.nested.clust() %>%
+    compact()
+    
+    if(length(true_cluster_nodes) ==0) {
+      true_cluster_nodes <- NULL
+    } else {
+    true_cluster_nodes <- merge.nested.clust(true_cluster_nodes) %>%
     merge.overlap.clust() %>%
     merge.nested.clust()
 
-  true_cluster_nodes <-  list.filter(true_cluster_nodes, sum(label %in% tree$tip.label) >= 5)
+  true_cluster_nodes <-  list.filter(true_cluster_nodes, sum(label %in% tree$tip.label) >= 5) # Cilter clusters to those containing 5 individuals
   true_cluster_nodes <- mclapply(true_cluster_nodes, function(x) dplyr::rename(x, parent=from, node=to),
                                  mc.cores=numCores)
   
- 
+    } # End if statement
   return(true_cluster_nodes)
-}
+} # End branchwise function
 ## Singleton nodes are likely, so will need original nodes to map onto tree (above), but will need to force bifurcation
 ## for analysis by removing intermediate, lonely node.  
 bifurcate <- function(tree, clusters) {
@@ -589,7 +622,12 @@ if (opt$cluster == "b") {
     true_cluster_nodes <- last(true_cluster_nodes)
     branch_length_limit <- last(branch_length_limit)
   } else {
-    true_cluster_nodes <- true_cluster_nodes[[1]]
+    if (length(true_cluster_nodes)==0) {
+      print("NO CLUSTERS FOUND FOR THESE THRESHOLD PARAMETERS")
+      stop()
+    } else {
+      true_cluster_nodes <- true_cluster_nodes[[1]]
+    }
   }
   
   clusters <- bifurcate(sub_tree, true_cluster_nodes)
@@ -841,7 +879,7 @@ connectClust <- function(sub_tree, cluster_data) {
   } # End for loop along original list
   return(dup_cluster_data)
 } #End connectClust function
-cluster_data <- connectClust(sub_tree, cluster_data) 
+suppressWarnings(cluster_data <- connectClust(sub_tree, cluster_data)) 
 
 # Added tree statistics, but currently using machine learning to determine which of the following
 # are actually better predictors of cluster dynamics
@@ -1110,13 +1148,13 @@ TreeAnno <- function(tree, clusters) {
   clusters.tbl <- dplyr::bind_rows(clusters, .id="cluster_id")
   tree.tbl <- as_tibble(tree)
   tree.tbl$cluster_id <- "Background"
-  for (i in 1:nrow(clusters.tbl)) {
-    for (j in 1:nrow(tree.tbl)) {
+  invisible(foreach (i = 1:nrow(clusters.tbl)) %do% {
+    invisible(foreach (j = 1:nrow(tree.tbl)) %do% {
      if (isTRUE(tree.tbl$parent[j] == clusters.tbl$parent[i])) {
         tree.tbl$cluster_id[j] = clusters.tbl$cluster_id[i]
       } # End if statement
-    } # end loop along tree
-  } # End loop along cluster_data
+    }) # end loop along tree
+  }) # End loop along cluster_data
   class(tree.tbl) = c("tbl_tree", class(tree.tbl))
   t2 <- as.treedata(tree.tbl)
   return(t2)
@@ -1130,7 +1168,7 @@ if (isTRUE(exists("time_tree", envir = globalenv()))) {
 
 write("Data are now being exported as 'cluster_info_<tree>.RDS' and 'dynamite_<tree>.tree.'")
 write.csv(select(cluster_data, -parent, -node), paste0("dynamite_trait_distributions_", opt$tree, ".csv"), quote=F, row.names=F)
-write.csv(select(cluster_tree_stats, -parent, -node), paste0("dynamite_tree_stats", opt$tree, ".csv"), quote=F, row.names=F)
+write.csv(cluster_tree_stats, paste0("dynamite_tree_stats", opt$tree, ".csv"), quote=F, row.names=F)
 
 #write.csv(cluster_tree_stats, paste0("tree_stats_", opt$tree, ".csv"))
 write.table(branch_length_limit, paste0("branch_length_limit.txt"), row.names=F, col.names = F)
