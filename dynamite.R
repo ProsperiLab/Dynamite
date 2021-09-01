@@ -27,7 +27,7 @@ if("optparse" %in% installed.packages()) {
   make_option(c("-l", "--threshold"), default=0.05, 
               help="threshold for cluster determination, which can be numeric or median [default= 0.05]. Note that median is very computationally intense", metavar="character"),
   make_option(c("-i", "--serial"), default=6, 
-              help="serial interval for cluster filtering [default= 4.5]", metavar="character"),
+              help="serial interval for cluster filtering [default= 6]", metavar="character"),
   make_option(c("-a", "--asr"), type="character", default="N", 
               help="option (Y/N) of ancestral state reconstruction for each cluster [default= N]", metavar="character")
 )
