@@ -851,7 +851,7 @@ if (class(clusters) == "data.frame") {
           dplyr::select(parent, node, ID, DATE, field, trait)
       }
     background_data <- data.frame(ID=background_sub_tree$tip.label) %>%
-      left_join(., metadata2) %>%
+      left_join(., metadata2, by="ID") %>%
       left_join(., select(family_tree, label, from, to) %>% rename(ID=label) , by="ID") %>%
       rename(parent=from, node=to) %>%
       mutate(cluster_id="Background")
@@ -862,7 +862,7 @@ names(cluster_data) <- names(clusters)
 assign("cluster_data", cluster_data, envir = globalenv())
 
 } # End dataManip() function
-dataManip(true_cluster_nodes)
+dataManip(clusters)
 
 ## Now DYNAMITE determines if clusters are related by connecting the children of each cluster to the root of remaining clusters
 print("Determining if clusters related by birth...")
@@ -1097,7 +1097,7 @@ cluster_tree_stats <- gatherStats()
 # Need to merge tree_stats with ASR data
 
 cluster_data <- dplyr::bind_rows(cluster_data, .id = "cluster_id") %>%
-  full_join(., background_data) %>%
+  full_join(., background_data, by=c("cluster_id", "parent", "node", "ID", "DATE", "field", "trait")) %>%
   dplyr::filter(!is.na(DATE))
 
   
@@ -1119,10 +1119,10 @@ TreeAnno <- function(tree, clusters) {
   return(t2)
 }
 
-annotated_subtree <- TreeAnno(sub_tree, true_cluster_nodes)
+annotated_subtree <- TreeAnno(sub_tree, clusters)
 
 if (isTRUE(exists("time_tree", envir = globalenv()))) {
-  annotated_timetree <- TreeAnno(time_tree, true_cluster_nodes)
+  annotated_timetree <- TreeAnno(time_tree, clusters)
 }
 
 write("Data are now being exported as 'cluster_info_<tree>.RDS' and 'dynamite_<tree>.tree.'")
