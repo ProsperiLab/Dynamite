@@ -3,7 +3,7 @@ DYNAMic Identification of Transmission Epicenters within phylogenies
 
 ## Description
 
-DYNAMITE is a depth-first search algorithm that is not restricted to monophyletic clades, allowing for improved sensitivity to the detection of dynamic, minimal evolution chains (MECs) that comprise transmission patterns of interest for public health relevance. A more detailed description of the DYNAMITE algorithm and its applications can be found at https://www.biorxiv.org/content/10.1101/2021.01.21.427647v1.
+DYNAMITE is a depth-first search algorithm that is not restricted to monophyletic clades, allowing for improved sensitivity to the detection of dynamic, minimal evolution chains (MECs) that comprise transmission patterns of interest for public health relevance. A more detailed description of the DYNAMITE algorithm and its applications can be found at https://www.biorxiv.org/content/10.1101/2021.01.21.427647v1. Since the release of this article, we have added a time component to the algorithm, allowing the user to restrain the inclusion of individuals in clusters based on a specified serial interval. This serial interval is defined as the period of time between a primary case-patient (infector) with symptom onset and a secondary case-patient, which has been observed to be 5-6 days for SARS-CoV-2 Rai et al., 2021. Direct transmission chains are intuitively represented by individuals separated by both minimal genetic evolution and time difference within this serial interval.
 
 **This project is still in beta and as such may contain major bugs and we do not guarantee proper results/functionality**
 
@@ -47,7 +47,9 @@ It is important to note that large trees (>30,000 sequences) cannot be scaled in
 --metadata (-m) = path to metadata file [default= .csv file]
 --cluster (-c) = choice of cluster algorithm from 'c' (Phylopart's cladewise) or 'b' (DYNAMITE's branchwise) [default= b]
 --timetree (-q) = option (Y/N) for molecular clock calibration and time tree output/statistics [default=Y]
+--seqLen (-s) = sequence length used in molecular clock calibration [default=30000]
 --threshold (-l) = threshold for cluster determination, which can be numeric or "median" [default= 0.05]
+--serial (-i) = serial interval (in days) for cluster filtering [default= 6]
 --asr (-asr) = option (Y/N) of ancestral state reconstruction for each cluster [default= N]
 ```
 
@@ -101,11 +103,19 @@ This file can be opened with \url{need info from NANA analytics} for interactive
 
 These tree files can also be viewed alongside the output data table in \url{need info from NANA analytics} but can also be opened in various alternative applications including (but not limited to) BEAST, Figtree, and NextStrain. Taxa in the tree have been modofied to supply sampling dates from metadata file following "|". 
 
+### Tree statistics summary table
+A summary file detailing tree statistics such as the estimated infection rate, described by Oster et al. (2018) and overall phylogenetic diversity (sum of branch lengths), described by Faith (1992). These statistics are calculated for each cluster as well as for the background population.
+
 ### Run time
-For a single tree with 362 tips (see /simulations/ folder), the DYNAMITE branchwise algorithm completed in 5.571 seconds in R v4.0 on a MacBook Air (2 GHz Intel Core i7, 8GB).
+For a single tree with with 362 tips (see /simulations/ folder), the DYNAMITE branchwise algorithm with no serial time restraints completed in 5.571 seconds in R v4.0 on a MacBook Air (2 GHz Intel Core i7, 8GB).
+
+### Visualization
+An R script found in COVEME_2021/DEMO referred to as dynaviz.R can also be used to visualize the distributions (both interactively using the shiny R package and in PDF form), as well the timed tree annotated according to cluster and metadata information in the form of a heatmap.
 
 
 ## References
+Rai B, Shukla A, Kant Dwivedi L (2021). Estimates of serial interval for COVID-19: A systematic review andmeta-analysis. Clin Epidemiol Glob Health. 9: 157-61.
+
 Prosperi MCF (2011). A novel methodology for large-scale phylogeny partition. Nat Commun. 2: 321.
 
 Paradis E, Claude J & Strimmer K (2004). APE: analyses of phylogenetics and evolution in R language. Bioinformatics 20: 289-290.

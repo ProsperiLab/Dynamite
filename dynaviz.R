@@ -58,7 +58,7 @@ df <- grouping %>% mutate(label=rownames(.)) %>%
 
 tree2 <- full_join(tree, df, by = "label")
 
-col <- setNames(c(brewer.pal(n1, "Paired"), brewer.pal(n2, "Greens"), brewer.pal(n3, "Reds")),
+col <- setNames(c(brewer.pal(n1, "Set3"), brewer.pal(n2, "Paired"), brewer.pal(n3, "Reds")),
                 c(unique(as.character(grouping$Cluster)), unique(grouping$Origin), unique(grouping$VAX)))
 
 t <- ggtree(tree2, mrsd=max_date) +
@@ -73,6 +73,7 @@ p_full <- gheatmap(t, grouping, colnames=F,
                    color=rgb(1, 1, 1, alpha=0.0001)) +
   scale_fill_manual(values=col, na.translate=F) +
   scale_x_ggtree() +
+  scale_x_date(date_breaks="1 month", date_labels = "%b") +
   scale_y_continuous(expand=c(0, 0.3)) +
   theme(panel.background = element_rect(fill = "transparent",colour = NA),
         plot.background = element_rect(fill = "transparent",colour = NA),
