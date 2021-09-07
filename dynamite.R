@@ -150,7 +150,7 @@ if(opt$timetree=="Y") {
     
     invisible(foreach (i=1:ncol(metadata)) %do% {
       if (tryCatch({
-      isTRUE(any(grepl("date$", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
+      isTRUE(any(grepl("date", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
       colnames(metadata)[i] <- "DATE"
     } # End  if statement
     }) # End for loop
