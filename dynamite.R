@@ -45,7 +45,7 @@ if (is.null(opt$tree)){
 # List of packages for session
 .packages <-  c("remotes", "phytools", "data.tree", "dplyr",
                 "tidytree", "lubridate", "rlist", "tidyverse", 
-                "ggtree", "parallel", "geiger", "tibble")  
+                "ggtree", "parallel", "geiger", "tibble", "future.apply")  
 .github_packages <- c("GuangchuangYu/treeio", "emillykkejensen/familyR", "tothuhien/Rlsd2", "emvolz/treedater") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
 
 ## Will need to remove install section if using on cluster ###################################
@@ -452,17 +452,18 @@ bifurcate <- function(tree, clusters) {
   unwanted <- vector(mode="list", length=length(clusters))
   for (c in seq_along(x)) {
     for (node in 2:nrow(x[[c]])) {
-      if (length(x[[c]]$parent[x[[c]]$parent==x[[c]]$parent[node]]) == 1) { # For each row in a cluster, find parent nodes
+      if (isTRUE(length(x[[c]]$parent[x[[c]]$parent==x[[c]]$parent[node]]) == 1)) { # For each row in a cluster, find parent nodes
         ## that only have one edge (need two for downstream analysis)
         p <- x[[c]]$parent[node]
         n <- x[[c]]$node[node]
         pofp <- x[[c]]$parent[x[[c]]$node==p]
-        unwanted <- x[[c]][x[[c]]$parent==pofp & x[[c]]$node==p,]
-        
-        new_bl <- x[[c]]$branch.length[node] + x[[c]]$branch.length[x[[c]]$node==x[[c]]$parent[node]]
-        x[[c]]$parent[node] = pofp
-        x[[c]]$branch.length[node] = new_bl
-        x[[c]] <- setdiff(x[[c]], unwanted)
+        if(isTRUE(length(pofp) != 0)) {
+          unwanted <- x[[c]][x[[c]]$parent==pofp & x[[c]]$node==p,]
+          new_bl <- x[[c]]$branch.length[node] + x[[c]]$branch.length[x[[c]]$node==x[[c]]$parent[node]]
+          x[[c]]$parent[node] = pofp
+          x[[c]]$branch.length[node] = new_bl
+          x[[c]] <- setdiff(x[[c]], unwanted)
+        } # End if statement for pofp != 0 (not root)
       } # End if statement ## If no lonely edges, let the cluster list be itself
     } # End loop along row
   } # End loop along clusters

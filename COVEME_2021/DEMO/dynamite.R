@@ -45,7 +45,7 @@ if (is.null(opt$tree)){
 # List of packages for session
 .packages <-  c("remotes", "phytools", "data.tree", "dplyr",
                 "tidytree", "lubridate", "rlist", "tidyverse", 
-                "ggtree", "parallel", "geiger", "tibble", "foreach")  
+                "ggtree", "parallel", "geiger", "tibble", "future.apply")  
 .github_packages <- c("GuangchuangYu/treeio", "emillykkejensen/familyR", "tothuhien/Rlsd2", "emvolz/treedater") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
 
 ## Will need to remove install section if using on cluster ###################################
@@ -134,12 +134,12 @@ if(endsWith(opt$metadata, "csv")) {
 }
 
 
-invisible(foreach (i = seq_along(colnames(metadata))) %do% {
+for (i in seq_along(colnames(metadata))) do {
   if (tryCatch({
     isTRUE(any(grepl("^id", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
     colnames(metadata)[i] <- "ID"
   } #end first if statement
-}) # End for loop
+} # End for loop
 metadata <- dplyr::filter(metadata, ID %in% sub_tree$tip.label)
 
 
@@ -148,12 +148,12 @@ if(opt$timetree=="Y") {
   # If re-running and lsd2 results already exist in working directory, read them in here
   checkForDates <- function(metadata) {
     
-    invisible(foreach (i=1:ncol(metadata)) %do% {
+    for (i in 1:ncol(metadata)) {
       if (tryCatch({
-      isTRUE(any(grepl("date$", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
+      isTRUE(any(grepl("date", colnames(metadata)[i], ignore.case = T)))}, error = function(e) stderr() )) {
       colnames(metadata)[i] <- "DATE"
     } # End  if statement
-    }) # End for loop
+    } # End for loop
     assign("metadata", metadata, envir = globalenv())
     createSTS <- function(metadata) {
       date_range <- seq(as.Date("01/01/1900", "%d/%m/%Y"), as.Date(Sys.Date(), "%d/%m/%Y"), by="day")
@@ -281,15 +281,15 @@ define.clades <- function(sub_tree) {
   
   ## Creating a list for all sub_trees using the familyR package (get_children function)
   clades <- list()
-  invisible(foreach (node = unique(supported_nodes$to)) %do% {
+  for (node in unique(supported_nodes$to)) {
     clades[[node]] <- familyR::get_children(family_tree, node)
-  }) # End loop along family_tree_supported
+  } # End loop along family_tree_supported
   ## This function introduces several null items in the list, which can be removed by the following:
   clades<-plyr::compact(clades)
   ## Merge information across 'nodes' and 'edges' dataframes within each nested list
-  invisible(foreach (i = seq_along(clades)) %do% {
+  for (i in seq_along(clades)) {
     clades[[i]] <- merge(clades[[i]]$edges,clades[[i]]$nodes, by.x = "to", by.y = "id")
-  }) # End loop along clades
+  } # End loop along clades
   ## Restructure list of clades for easy visualization and manipulation and remove
   ## Zeroth level (contains root branch length) from first clade (full tree) if exists
   clades <- mclapply(clades, function(x) {
@@ -450,22 +450,23 @@ branchLengthLimit <- function(tree, threshold) {
 bifurcate <- function(tree, clusters) {
   x <- clusters  # Copy clusters list for ease
   unwanted <- vector(mode="list", length=length(clusters))
-  invisible(foreach (c=seq_along(x)) %do% {
-    foreach (node=2:nrow(x[[c]])) %do% {
-      if (length(x[[c]]$parent[x[[c]]$parent==x[[c]]$parent[node]]) == 1) { # For each row in a cluster, find parent nodes
+  for (c in seq_along(x)) {
+    for (node in 2:nrow(x[[c]])) {
+      if (isTRUE(length(x[[c]]$parent[x[[c]]$parent==x[[c]]$parent[node]]) == 1)) { # For each row in a cluster, find parent nodes
         ## that only have one edge (need two for downstream analysis)
         p <- x[[c]]$parent[node]
         n <- x[[c]]$node[node]
         pofp <- x[[c]]$parent[x[[c]]$node==p]
-        unwanted <- x[[c]][x[[c]]$parent==pofp & x[[c]]$node==p,]
-        
-        new_bl <- x[[c]]$branch.length[node] + x[[c]]$branch.length[x[[c]]$node==x[[c]]$parent[node]]
-        x[[c]]$parent[node] = pofp
-        x[[c]]$branch.length[node] = new_bl
-        x[[c]] <- setdiff(x[[c]], unwanted)
+        if(isTRUE(length(pofp) != 0)) {
+          unwanted <- x[[c]][x[[c]]$parent==pofp & x[[c]]$node==p,]
+          new_bl <- x[[c]]$branch.length[node] + x[[c]]$branch.length[x[[c]]$node==x[[c]]$parent[node]]
+          x[[c]]$parent[node] = pofp
+          x[[c]]$branch.length[node] = new_bl
+          x[[c]] <- setdiff(x[[c]], unwanted)
+        } # End if statement for pofp != 0 (not root)
       } # End if statement ## If no lonely edges, let the cluster list be itself
     } # End loop along row
-  }) # End loop along clusters
+  } # End loop along clusters
   return(x)
 } # End function; 
 
@@ -481,11 +482,11 @@ if (opt$cluster == "b") {
       ## Need to add mean_bl column  to original clade list
       clade$mean_bl <- rep(Inf, nrow(clade))
       clade$DATE=NA
-      invisible(foreach(i = 1:nrow(clade)) %do% {
+      for(i in 1:nrow(clade)) {
         if(clade$label[i] %in% sub_tree$tip.label) {
           clade$DATE[i] =decimal_date(metadata$DATE[which(metadata$ID==clade$label[i])])
         }
-      })
+      }
       clade$mean_pwdate <- rep(NA, nrow(clade)) ################################################
       
       
@@ -531,7 +532,7 @@ if (opt$cluster == "b") {
           # The branch length is NOT calculated by the branch length of an individual
           # edges leading to nodes in the shortlist BUT on the mean of the nodes in the previous level
           # and added node.
-          invisible(foreach (x=1:nrow(sub_clade)) %do% {
+          for (x in 1:nrow(sub_clade)) {
             if (isTRUE(sub_clade$level[x] < current_level &
                        sub_clade$mean_bl[x] != Inf)) {
               sub_clade$mean_bl[x] <- sub_clade$mean_bl[x]
@@ -547,7 +548,7 @@ if (opt$cluster == "b") {
                 sub_clade$mean_pwdate[x] <- NA
               }
             }
-          }) # End for loop
+          } # End for loop
           
           # Identify nodes with mean branch length > current mean branch length limit
           # and remove from shortlist
@@ -1069,15 +1070,15 @@ gatherStats <- function() {
   
   ## Populate cluster_dynamics table
   cluster_dynamics <- list()
-  invisible(foreach (i = seq_along(clusters)) %do% {
+  for (i in seq_along(clusters)) {
     cluster_dynamics[[i]] <- data.frame(cluster_id=names(clusters)[i],
-                                        PD = cluster_PD[[i]])})
+                                        PD = cluster_PD[[i]])}
   
   if (isTRUE(exists("time_tree", envir = globalenv()))) {
-    invisible(foreach(i=1:length(cluster_dynamics)) %do% {
+    for(i in 1:length(cluster_dynamics))  {
       cluster_dynamics[[i]] <- cbind(cluster_dynamics[[i]], timeData(clusters_time_tree[[i]]))
       cluster_dynamics[[i]]$R_Oster <- calculateOster(clusters_time_tree[[i]])
-    })
+    }
  
     
     background_dynamics <- cbind(cbind(background_dynamics, 
@@ -1107,13 +1108,13 @@ TreeAnno <- function(tree, clusters) {
   clusters.tbl <- dplyr::bind_rows(clusters, .id="cluster_id")
   tree.tbl <- as_tibble(tree)
   tree.tbl$cluster_id <- "Background"
-  invisible(foreach (i = 1:nrow(clusters.tbl)) %do% {
-    invisible(foreach (j = 1:nrow(tree.tbl)) %do% {
+  for (i in 1:nrow(clusters.tbl))  {
+    for (j in 1:nrow(tree.tbl)) {
      if (isTRUE(tree.tbl$parent[j] == clusters.tbl$parent[i])) {
         tree.tbl$cluster_id[j] = clusters.tbl$cluster_id[i]
       } # End if statement
-    }) # end loop along tree
-  }) # End loop along cluster_data
+    } # end loop along tree
+  } # End loop along cluster_data
   class(tree.tbl) = c("tbl_tree", class(tree.tbl))
   t2 <- as.treedata(tree.tbl)
   return(t2)
