@@ -417,12 +417,15 @@ branchLengthLimit <- function(tree, threshold) {
   } ## Determine MPPD for all well-supported clades
   
   ## Create a vector of MPPDs for plotting and determining branch length limit
-  distvec <- pdist.clusttree(tree, mode='leaf')
+  if(isTRUE(opt$cluster=="b")) {
+    distvec <- pdist.clusttree(tree, mode='all')
+  } else {
+    distvec <- pdist.clusttree(tree, mode='leaf')
+    ## Determine MPPDs for all well-supported clades
+    clade_MPPD <- pdist.clades(clades, tree, mode='leaf')
+    assign("clade_MPPD", clade_MPPD, envir=globalenv())
+  }
   hist(distvec$MPPD)
-  
-  ## Determine MPPDs for all well-supported clades
-  clade_MPPD <- pdist.clades(clades, tree, mode='leaf')
-  assign("clade_MPPD", clade_MPPD, envir=globalenv())
   
   optimizeThreshold <- function(distvec, threshold) {
     if (isTRUE(threshold=="median")) {
