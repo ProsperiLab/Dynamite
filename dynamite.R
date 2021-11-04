@@ -485,7 +485,7 @@ if (opt$cluster == "b") {
       ## Need to add mean_bl column  to original clade list
       clade$mean_bl <- rep(Inf, nrow(clade))
       clade$DATE=NA
-      for(i in 1:nrow(clade)) {
+      for (i in 1:nrow(clade)) {
         if(clade$label[i] %in% sub_tree$tip.label) {
           clade$DATE[i] =decimal_date(metadata$DATE[which(metadata$ID==clade$label[i])])
         }
@@ -500,16 +500,13 @@ if (opt$cluster == "b") {
       
       ## Set initial values
       current_level <- as.numeric(2)
-      current_mean_bl <- as.numeric(-Inf)
-      
-      
       
       ## Initiate subclade using first two edges connected to root of clade (level=1)
       sub_clade <- filter(clade, level==1,
                           branch.length <= branch_length_limit)
       
       if (nrow(sub_clade) > 0) {
-        while(isTRUE(current_mean_bl <= branch_length_limit)){
+        while(isTRUE(current_level <= max(clade$level))){
           
           # Create a vector of nodes sampled from the subsequent level
           # Each iteration chooses amongst nodes that are connected to the current sub-clade:
@@ -524,7 +521,7 @@ if (opt$cluster == "b") {
           # The shortlist is enlarged by vertices that are:
           #  1) adjacent to the most recent added node(s)
           #  2) not already IN the sub_clade
-          new_node <- dplyr::setdiff(next_level_nodes, sub_clade)
+          new_node <- dplyr::setdiff(next_level_nodes, sub_clade) 
           sub_clade <- rbind(sub_clade,new_node, fill=T)
           
           tmp_date_mat <- as.matrix(pw_date_mat[rownames(pw_date_mat) %in% sub_clade$label, colnames(pw_date_mat) %in% sub_clade$label])
@@ -540,10 +537,13 @@ if (opt$cluster == "b") {
                        sub_clade$mean_bl[x] != Inf)) {
               sub_clade$mean_bl[x] <- sub_clade$mean_bl[x]
             } else{
-              sub_clade$mean_bl[x] <- sum(c(sub_clade$branch.length[x],
-                                            subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))/
-                length(c(sub_clade$branch.length[x],
-                         subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))
+              node_path <- nodepath(sub_tree, sub_clade$from[1], sub_clade$to[x])
+              sub_clade$mean_bl[x] <- mean(sub_clade$branch.length[sub_clade$from %in% node_path & sub_clade$to %in% node_path])
+              ####### Old method where all branches in previous level used ######################################################################################################3
+              # sub_clade$mean_bl[x] <- sum(c(sub_clade$branch.length[x],
+              #                               subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))/
+              #   length(c(sub_clade$branch.length[x],
+              #            subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))
               if(sub_clade$label[x] %in% sub_tree$tip.label) {
                 n <- match(sub_clade$label[x],colnames(tmp_date_mat))
                 sub_clade$mean_pwdate[x] <- sum(tmp_date_mat[1:n,1:n], na.rm=T)/n*(n-1)
@@ -555,18 +555,17 @@ if (opt$cluster == "b") {
           
           # Identify nodes with mean branch length > current mean branch length limit
           # and remove from shortlist
-          unwanted_edges_at_current_level <- filter(sub_clade, level==current_level, mean_bl >= branch_length_limit | mean_pwdate >= opt$serial/365)
+          unwanted_edges_at_current_level <- filter(sub_clade, level==current_level, mean_bl > branch_length_limit | mean_pwdate >= opt$serial/365)
           sub_clade <- setdiff(sub_clade, unwanted_edges_at_current_level)
           
           ## Redefine current level and mean branch length, taking into account whether
           ## or not all nodes belonging to the current level have been filtered out
-          if (max(sub_clade$level)==current_level) {
+          if (isTRUE(max(sub_clade$level)==current_level)) {
             #current_mean_bl <- min(sub_clade$mean_bl[level=current_level])
-            current_mean_bl <- mean(sub_clade$branch.length)
+            current_level <- current_level+1
           } else {
-            current_mean_bl = Inf
+            current_level=Inf
           } # End ifelse statement
-          current_level <- current_level+1
           
         } # End tree traversal (while loop)
       }else {
@@ -575,7 +574,7 @@ if (opt$cluster == "b") {
       return(sub_clade)
     } # End pickClust function
     clades <- mclapply(clades, function(x) {
-      if(nrow(x) >=9) {
+      if(nrow(x) >=8) {
         x <- x
       } else {
         x <- NULL
