@@ -269,6 +269,12 @@ define.clades <- function(sub_tree) {
   ## Grab only subtrees that are supported by bootstrap values >90
   ## We may need to change this in case people have other support values
   ## Note that subtrees() function in ape renumbers nodes, so useless here, since at the end we wish to recombine the information
+  if(length(sub_tree$node.label[!is.na(sub_tree$node.label)]) ==0) {
+    print("No support values for internal nodes were found within the tree. Assuming all branches are well-supported, but this is not recommended!")
+    #    stop()
+    sub_tree$node.label = rep(100, sub_tree$Nnode)
+  }
+  
   family_tree <- suppressWarnings(tidytree::as_tibble(sub_tree))
   ## Need to relabel columns so that "parent" and "node" are "from" and "to" for familyR::get_children function
   colnames(family_tree)[1:2] <- c("from", "to")
@@ -280,18 +286,15 @@ define.clades <- function(sub_tree) {
   
   sub_tree$node.label <- as.numeric(sub_tree$node.label)
   
-  if(length(sub_tree$node.label[!is.na(sub_tree$node.label)]) ==0) {
-    print("No support values for internal nodes were found within the tree. \
-          Assuming all branches are well-supported, but this is not recommended!")
-#    stop()
-    supported_nodes <- family_tree
+#} else {
+  if(max(as.numeric(sub_tree$node.label), na.rm=T) >1) {
+    supported_nodes <- suppressWarnings(dplyr::filter(family_tree, as.numeric(label) > 90))
   } else {
-    if(max(as.numeric(sub_tree$node.label), na.rm=T) >1) {
-      supported_nodes <- suppressWarnings(dplyr::filter(family_tree, as.numeric(label) > 90))
-    } else {
-      supported_nodes <- suppressWarnings(dplyr::filter(family_tree, as.numeric(label) > 0.90))
-    } # End first if-else statement
-  } # End second if-else statement
+    supported_nodes <- suppressWarnings(dplyr::filter(family_tree, as.numeric(label) > 0.90))
+  } # End first if-else statement
+#} # End second if-else statement
+  
+ 
   
   assign("supported_nodes", supported_nodes, envir = globalenv())  
   
