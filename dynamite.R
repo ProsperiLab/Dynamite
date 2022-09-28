@@ -43,9 +43,9 @@ if (is.null(opt$tree)){
 
 
 # List of packages for session
-.packages <-  c("remotes", "phytools", "data.tree", "dplyr",
-                "tidytree", "lubridate", "rlist", "tidyverse", 
-                "ggtree", "parallel", "geiger", "tibble", "future.apply")  
+.packages <-  c("remotes", "data.tree", "dplyr",
+                "lubridate", "rlist",  "phytools",
+                "ggtree", "parallel", "geiger", "future.apply")  
 .github_packages <- c("GuangchuangYu/treeio", "emillykkejensen/familyR", "tothuhien/Rlsd2", "emvolz/treedater") # May need to incorporate code for familyR (https://rdrr.io/github/emillykkejensen/familyR/src/R/get_children.R) i fno longer supported.
 
 ## Will need to remove install section if using on cluster ###################################
@@ -62,7 +62,7 @@ if(length(.github_packages[!.inst_github]) > 0) try(devtools::install_github(.gi
 ## Will need to remove install section if using on cluster ###################################
 
 # Load packages into session 
-invisible(lapply(.packages, library, warn.conflicts=FALSE, character.only=TRUE))
+invisible(lapply(.packages, require, warn.conflicts=FALSE, character.only=TRUE))
 invisible(lapply(gsub(".+\\/(.+)", "\\1", .github_packages), library, warn.conflicts=FALSE, character.only=TRUE))
 
 print(paste0("dynamite",
@@ -86,7 +86,7 @@ options(digits=15)
 
 numCores = try(Sys.getenv("SLURM_CPUS_ON_NODE"))
 if (numCores == "") {
-  numCores = detectCores()
+  numCores = future::availableCores()
 }
 
 
@@ -94,7 +94,7 @@ print("=========================================================================
 # Script will read in tree from directory based on a number of format
 # Function to read Nexus files or Newick files 
 write("Checking for tree file...")
-checkFortree <- function(tree_file) {
+checkForTree <- function(tree_file) {
   print("Detecting tree file...")
   # Check tree_file format -- either Newick or Nexus -- using suffices
   if (endsWith(tree_file, "nwk") || 
@@ -123,9 +123,10 @@ checkFortree <- function(tree_file) {
   return(sub_tree)
 }# end checkfortree_file function
 
-sub_tree <- checkFortree(opt$tree)
+sub_tree <- checkForTree(opt$tree)
 
-print("Searching for metadata file...")
+checkForMetadata <- function(metadata_file) {
+  print("Searching for metadata file...")
 if(endsWith(opt$metadata, "csv")) {
   metadata <- read.csv(opt$metadata, header=T, stringsAsFactors = F)
   if(isTRUE(colnames(metadata)[1]=="X")) {
@@ -150,46 +151,40 @@ for (i in seq_along(colnames(metadata))) {
 }# End for loop
 metadata <- dplyr::filter(metadata, ID %in% sub_tree$tip.label)
 
+mindate <- as.Date("01/01/1900", "%d/%m/%Y")
+  if (isTRUE(class(metadata$DATE) == "integer")) {
+    metadata$DATE <- as.Date(ISOdate(metadata$DATE))
+  } else if (isTRUE(class(metadata$DATE) == "numeric")) {
+    metadata$DATE <- as.Date(date_decimal(metadata$DATE))
+  } else if (isTRUE(class(metadata$DATE) == "character")) {
+    metadata$DATE <- as.Date(metadata$DATE, tryFormats = c("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y"))
+    if (isTRUE(min(metadata$DATE, na.rm=T) < mindate)) { # Attempt to correct if in wrong format, which we will know if the first date is before 1900s
+      metadata$DATE <- as.Date(metadata$DATE, tryFormats = c("%d/%m/%Y", "%d-%m-%Y"))
+    }
+  } # if-else statement
+if (isTRUE(max(metadata$DATE) > Sys.Date())) {
+  
+  write(paste("The following sequences likely have incorret dates:",
+              return(sts[sts==max(sts)]),
+              "Please start DYNAMITE again, placing a .tab metadata file with consistent date information in current folder.",
+              sep=" "))
+  stop()
+} # End checkpoint if statement
+## Will need sts in downstream analyses
+return(metadata)
+}
+
+metadata <- checkForMetadata(opt$metadata)
 
 
 if(opt$timetree=="Y") {
   # If re-running and lsd2 results already exist in working directory, read them in here
-  checkForDates <- function(metadata) {
-    
-     createSTS <- function(metadata) {
-      date_range <- seq(as.Date("01/01/1900", "%d/%m/%Y"), as.Date(Sys.Date(), "%d/%m/%Y"), by="day")
-      sts <- metadata$DATE
-      if (isTRUE(class(sts) == "integer")) {
-        sts <- as.Date(ISOdate(sts))
-      } else if (isTRUE(class(sts) == "numeric")) {
-        sts <- as.Date(date_decimal(sts))
-      } else if (isTRUE(class(sts) == "character")) {
-        sts <- as.Date(sts, tryFormats = c("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y"))
-        if (isTRUE(min(sts, na.rm=T) < min(date_range))) { # Attempt to correct if in wrong format, which we will know if the first date is before 1900s
-          sts <- as.Date(metadata$DATE, tryFormats = c("%d/%m/%Y", "%d-%m-%Y"))
-        }
-      } # if-else statement
-      sts <- setNames(sts, metadata$ID)
-      sts <- sts[names(sts) %in% sub_tree$tip.label]
-      return(sts)
-    }
-    sts <- createSTS(metadata)
-    
-    ## Checkpoint
-    #  if (isTRUE(max(as.Date(ISOdate(sts, 1, 1)))> Sys.Date())) {
-    if (isTRUE(max(sts) > Sys.Date())) {
-      
-      write(paste("The following sequences likely have incorret dates:",
-                  return(sts[sts==max(sts)]),
-                  "Please start DYNAMITE again, placing a .tab metadata file with consistent date information in current folder.",
-                  sep=" "))
-      stop()
-    } # End checkpoint if statement
-    ## Will need sts in downstream analyses
-    return(sts)
-  } # End checkForDates function
-  sts <- checkForDates(metadata)
+  sts <- metadata$DATE
+  sts <- metadata$ATE
+  sts <- setNames(sts, metadata$ID)
+  sts <- metadata$DATE[names(sts) %in% sub_tree$tip.label]
   
+
   lsd_files <- list.files(pattern="lsd2*nexus") 
   
   if(length(lsd_files) >0) {
@@ -294,8 +289,6 @@ define.clades <- function(sub_tree) {
   } # End first if-else statement
 #} # End second if-else statement
   
- 
-  
   assign("supported_nodes", supported_nodes, envir = globalenv())  
   
   ## Creating a list for all sub_trees using the familyR package (get_children function)
@@ -312,8 +305,8 @@ define.clades <- function(sub_tree) {
   ## Zeroth level (contains root branch length) from first clade (full tree) if exists
   clades <- mclapply(clades, function(x) {
     dplyr::select(x, from, everything()) %>%
-      arrange(level) %>%
-      filter(!level==0)
+      dplyr::arrange(level) %>%
+      dplyr::filter(!level==0)
   }, mc.cores=numCores) %>%
     list.filter(from[1] != rootnode(sub_tree)) # Whole tree is included because support is alwasy 100% for root, so discard# End loop along clades
   
@@ -355,11 +348,11 @@ merge.overlap.clust <- function(clusters) {
        if (isTRUE(sum(copy[[cc]]$to %in% clusters[[ct]]$to) > 0.01*length(copy[[cc]]$to)) &
           isTRUE(names(copy)[[cc]] != names(clusters)[[ct]])) {
         unwanted[[cc]] <- copy[[cc]]
-        clusters[[ct]] <- full_join(copy[[cc]], clusters[[ct]], by=c("from", "to", "branch.length", "label"))
+        clusters[[ct]] <- dplyr::full_join(copy[[cc]], clusters[[ct]], by=c("from", "to", "branch.length", "label"))
       } else{clusters[[ct]] <- clusters[[ct]]}
     } # End loop along copy
   }# End loop along true
-  result <- setdiff(clusters, Filter(Negate(function(x) is.null(unlist(x))), unwanted)) %>%
+  result <- dplyr::setdiff(clusters, Filter(Negate(function(x) is.null(unlist(x))), unwanted)) %>%
     mclapply(., function(x){
       dplyr::select(x, from, to, branch.length, label) %>%
         dplyr::arrange(from,to) 
@@ -449,13 +442,17 @@ branchLengthLimit <- function(tree, threshold) {
     if (isTRUE(threshold=="median")) {
       bl <- runif(100, 0, median(distvec$MPPD))
     } else {
-      bl <- runif(round(as.numeric(threshold)*1000), 0, as.numeric(quantile(distvec$MPPD, as.numeric(threshold))))
+      if (isTRUE(as.numeric(threshold)==0.01)) {
+        bl <- quantile(distvec$MPPD, as.numeric(threshold))
+      } else {
+        bl <- runif(round(as.numeric(threshold)*10), 0, as.numeric(quantile(distvec$MPPD, as.numeric(threshold))))
       }
+    }
     
     bl <- bl[order(bl)]
     
     return(bl)
-  } # End optimizeThreshold function
+  } # End function
   
   #  branch_length_limit <- quantile(distvec$MPPD, opt$threshold)
   branch_length_limit <- optimizeThreshold(distvec, opt$threshold)
@@ -490,12 +487,14 @@ bifurcate <- function(tree, clusters) {
 
 
 print("Determining branch length limit....")
+
 branch_length_limit <- branchLengthLimit(sub_tree, opt$threshold)
+
 if (opt$cluster == "b") {
   print("DYNAMITE's branchwise algorithm is being used.")
-  branchWise <- function(tree, branch_length_limit) {
+  branchWise <- function(tree, limit) {
     
-    pickClust <- function(clade){
+    pickClust <- function(clade, limit){
       
       ## Need to add mean_bl column  to original clade list
       clade$mean_bl <- rep(Inf, nrow(clade))
@@ -518,8 +517,8 @@ if (opt$cluster == "b") {
       current_level <- as.numeric(2)
       
       ## Initiate subclade using first two edges connected to root of clade (level=1)
-      sub_clade <- filter(clade, level==1,
-                          branch.length <= branch_length_limit)
+      sub_clade <- dplyr::filter(clade, level==1,
+                          branch.length <= limit)
       
       if (nrow(sub_clade) > 0) {
         while(isTRUE(current_level <= max(clade$level))){
@@ -527,7 +526,7 @@ if (opt$cluster == "b") {
           # Create a vector of nodes sampled from the subsequent level
           # Each iteration chooses amongst nodes that are connected to the current sub-clade:
           
-          next_level_nodes <- filter(clade, level == current_level,
+          next_level_nodes <- dplyr::filter(clade, level == current_level,
                                      from %in% sub_clade$to)
           
           # A shortlist of possible enlargements of the sub-clade is kept to be able
@@ -571,8 +570,8 @@ if (opt$cluster == "b") {
           
           # Identify nodes with mean branch length > current mean branch length limit
           # and remove from shortlist
-          unwanted_edges_at_current_level <- filter(sub_clade, level==current_level, mean_bl > branch_length_limit | mean_pwdate >= opt$serial/365)
-          sub_clade <- setdiff(sub_clade, unwanted_edges_at_current_level)
+          unwanted_edges_at_current_level <- dplyr::filter(sub_clade, level==current_level, mean_bl > limit | mean_pwdate >= opt$serial/365)
+          sub_clade <- dplyr::setdiff(sub_clade, unwanted_edges_at_current_level)
           
           ## Redefine current level and mean branch length, taking into account whether
           ## or not all nodes belonging to the current level have been filtered out
@@ -597,9 +596,9 @@ if (opt$cluster == "b") {
       }
       return(x)
     }, mc.cores=numCores) %>%
-      compact() ## Filter search to only clades with at least 5 sampled individuals
-    true_cluster_nodes <- mclapply(clades, pickClust, mc.cores=numCores) %>%
-      compact()
+      plyr::compact() ## Filter search to only clades with at least 5 sampled individuals
+    true_cluster_nodes <- mclapply(clades, function(x) pickClust(x, limit), mc.cores=numCores) %>%
+      plyr::compact()
     
     if(length(true_cluster_nodes) ==0) {
       true_cluster_nodes <- NULL
@@ -616,9 +615,8 @@ if (opt$cluster == "b") {
     return(true_cluster_nodes)
   } # End branchwise function
   .possible_clusters <- mclapply(branch_length_limit, 
-                                function(x) branchWise(sub_tree, x), 
-                                mc.cores = numCores) %>%
-    compact()
+                                function(x) branchWise(sub_tree, x), mc.cores=numCores) %>%
+    plyr::compact()
   .nclust <- mclapply(.possible_clusters, length, mc.cores=numCores)
   .best <- suppressWarnings(max(do.call("rbind", .nclust)))
   true_cluster_nodes <- .possible_clusters[which(.nclust==.best)]
@@ -647,14 +645,14 @@ if (opt$cluster == "b") {
 } else {
   if (opt$cluster == "c") {
     print("DYNAMITE's cladewise algorithm (Phylopart) is being used.")
-    phylopart <- function(tree, branch_length_limit) {
+    phylopart <- function(tree, limit) {
       clusters <- list()
       for(clade in seq_along(clades)) {
-        if (isTRUE(clade_MPPD[[clade]] <= branch_length_limit)) {
+        if (isTRUE(clade_MPPD[[clade]] <= limit)) {
           clusters[[clade]] <- clades[[clade]]
         } else{NULL}
       }
-      clusters <- compact(clusters) %>%
+      clusters <- plyr::compact(clusters) %>%
         merge.nested.clust() %>%
         merge.overlap.clust() %>% 
         merge.nested.clust()
@@ -745,7 +743,7 @@ print("ASR performed using the empirical Bayesian method.")
     fitER <- list()
     ## set zero-length branches to be 1/1000000 total tree length
     dst<-multi2di(tree)
-    dst$edge.length[dst$edge.length==0]<-max(nodeHeights(tree))*1e-6
+    dst$edge.length[dst$edge.length==0]<-max(phytools::nodeHeights(tree))*1e-6
     
     rownames(metadata) <- metadata$ID
     for(i in 3:ncol(metadata)) { # Requires that taxa id and sampling dates are first two columns
@@ -807,7 +805,7 @@ print("ASR performed using the empirical Bayesian method.")
     ## For now, best to only assign one state (per trait) per node, rather than probabilities, and, in order to incorporate uncertainty, we will assign "NEI" (Not Enough Info) to any node with <90% posterior probability of any given state.
     
     anc.states <- mclapply(anc.states, function(x) {
-      gather(x, trait, pr, -node) %>%
+      tidyr::gather(x, trait, pr, -node) %>%
         group_by(node) %>%
         dplyr::mutate(max_pr = max(pr)) %>% ## Determine if reliable state found for each node using max probability
         dplyr::mutate(trait = case_when(max_pr < 0.90 ~ "NEI",
@@ -850,7 +848,7 @@ if (class(clusters) == "data.frame") {
     clusters <- clusters
   } else {warning("class of clusters data unknown, error in dataManip() function or above")}
   
-  metadata2 <- gather(metadata, field, trait,  -ID, -DATE, factor_key=TRUE)
+  metadata2 <- tidyr::gather(metadata, field, trait,  -ID, -DATE, factor_key=TRUE)
   cluster_data <- list()
 
   if (isTRUE(exists("asr", envir = globalenv()))) { #Only use if ASR incorporated above
@@ -929,12 +927,20 @@ calculatePD <- function(tree) {
   pd <- sum(tree$edge.length)
   return(pd)
 }
+calculateOster <- function(tree) {
+  tree <- multi2di(tree)  
+  cluster_size <- length(tree$tip.label)-1
+  sum_heights <- sum(phytools::nodeHeights(tree))
+  longest <- max(phytools::nodeHeights(tree))
+  co <- cluster_size/sum_heights + longest
+  return(co)
+}
 
 if (isTRUE(exists("time_tree", envir = globalenv()))) {
   print("Estimating infection rate for each cluster (Oster, 2018)")
 
   timeData <- function(tree) {
-    timespan <- max(nodeHeights(tree))*365
+    timespan <- max(phytools::nodeHeights(tree))*365
     mrsd <- max(sts[names(sts) %in% tree$tip.label], na.rm=T)
     tmrca <- mrsd-timespan
     size <- length(tree$tip.label)
@@ -944,19 +950,12 @@ if (isTRUE(exists("time_tree", envir = globalenv()))) {
     
     return(df)
   }
-  calculateOster <- function(tree) {
-    tree <- multi2di(tree)  
-    cluster_size <- length(tree$tip.label)-1
-    sum_heights <- sum(nodeHeights(tree))
-    longest <- max(nodeHeights(tree))
-    co <- cluster_size/sum_heights + longest
-    return(co)
-  }
+
 #   calculateNe <- function(tree) {
 #   tree <- multi2di(tree)
-#   res=round(max(nodeHeights(tree))/2) # Daily
+#   res=round(max(phytools::nodeHeights(tree))/2) # Daily
 #   fit <- tryCatch(skygrowth.map(tree, res=res, tau0=0.1), error=function(e) NULL)
-#   p <- data.frame(time=max(nodeHeights(tree))-fit$time, nemed=fit$ne, ne_ci=fit$ne_ci)
+#   p <- data.frame(time=max(phytools::nodeHeights(tree))-fit$time, nemed=fit$ne, ne_ci=fit$ne_ci)
 #   return(p)
 # }
 # calculateR0 <- function(Ne, conf.level=0.95) {
@@ -1094,24 +1093,26 @@ gatherStats <- function() {
 #  cluster_cherries <- mclapply(clusters_sub_tree, calculateCC, mc.cores=numCores)
 
   cluster_PD <- mclapply(clusters_sub_tree, calculatePD, mc.cores=numCores)
+  cluster_Oster <- mclapply(clusters_sub_tree, calculateOster, mc.cores=numCores)
   
-  background_dynamics <- data.frame(cluster_id="Background", PD = calculatePD(background_sub_tree))
+  background_dynamics <- data.frame(cluster_id="Background", 
+                                    PD = calculatePD(background_sub_tree),
+                                    Oster = calculateOster(background_sub_tree))
   
   ## Populate cluster_dynamics table
   cluster_dynamics <- mclapply (seq_along(clusters), function(i) {
     data.frame(cluster_id=names(clusters)[i],
-                                        PD = cluster_PD[[i]])}, mc.cores=numCores)
+                                        PD = cluster_PD[[i]],
+                                        Oster = cluster_Oster[[i]])}, mc.cores=numCores)
   
   if (isTRUE(exists("time_tree", envir = globalenv()))) {
     for (i in 1:length(cluster_dynamics)) {
       cluster_dynamics[[i]] <- cbind(cluster_dynamics[[i]], timeData(clusters_time_tree[[i]]))
-      cluster_dynamics[[i]]$R_Oster <- calculateOster(clusters_time_tree[[i]])
+      
     }
  
     
-    background_dynamics <- cbind(cbind(background_dynamics, 
-                                      data.frame(R_Oster = calculateOster(background_time_tree)),
-                                                 timeData(background_time_tree)))
+    background_dynamics <- cbind(cbind(background_dynamics, timeData(background_time_tree)))
 } # End if statement
   names(cluster_dynamics) <- names(clusters)
   cluster_dynamics <- dplyr::bind_rows(cluster_dynamics, .id = "cluster_id") %>%
@@ -1154,16 +1155,19 @@ if (isTRUE(exists("time_tree", envir = globalenv()))) {
   annotated_timetree <- TreeAnno(time_tree, clusters)
 }
 
+tree_name=basename(opt$tree)
 write("Data are now being exported as 'cluster_info_<tree>.RDS' and 'dynamite_<tree>.tree.'")
-write.csv(select(cluster_data, -parent, -node), paste0("dynamite_trait_distributions_", opt$tree, ".csv"), quote=F, row.names=F)
-write.csv(cluster_tree_stats, paste0("dynamite_tree_stats_", opt$tree, ".csv"), quote=F, row.names=F)
+
+cluster_data = sapply(cluster_data, function(x) gsub(',', ' ', x)) # Removing any unwanted commas!
+write.csv(select(cluster_data, -parent, -node), paste0("dynamite_trait_distributions_", tree_name, ".csv"), quote=F, row.names=F)
+write.csv(cluster_tree_stats, paste0("dynamite_tree_stats_", tree_name, ".csv"), quote=F, row.names=F)
 
 #write.csv(cluster_tree_stats, paste0("tree_stats_", opt$tree, ".csv"))
-write.table(branch_length_limit, paste0("branch_length_limit.txt"), row.names=F, col.names = F)
-write.beast(annotated_subtree, paste0("dynamite_subtree_", opt$tree, ".tree")) #### NEED THIS OUTPUT####################################
+write.table(branch_length_limit, paste0("branch_length_limit_", tree_name, ".txt"), row.names=F, col.names = F)
+write.beast(annotated_subtree, paste0("dynamite_subtree_", tree_name, ".tree")) #### NEED THIS OUTPUT####################################
 
 if (isTRUE(exists("time_tree", envir = globalenv()))) {
-  write.beast(annotated_timetree, paste0("dynamite_timetree_", opt$tree, ".tree")) #### NEED THIS OUTPUT####################################
+  write.beast(annotated_timetree, paste0("dynamite_timetree_", tree_name, ".tree")) #### NEED THIS OUTPUT####################################
 }
 
 rt1 <- Sys.time()
