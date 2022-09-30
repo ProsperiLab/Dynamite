@@ -120,6 +120,8 @@ checkForTree <- function(tree_file) {
   }# end conditional statement
   #assign("sub_tree_file", sub_tree_file, envir=globalenv())
   sub_tree <- unroot(sub_tree)
+  sub_tree$tip.label = gsub("'", "", sub_tree$tip.label)
+  sub_tree <- multi2di(sub_tree)
   return(sub_tree)
 }# end checkfortree_file function
 
@@ -171,6 +173,7 @@ if (isTRUE(max(metadata$DATE) > Sys.Date())) {
   stop()
 } # End checkpoint if statement
 ## Will need sts in downstream analyses
+
 return(metadata)
 }
 
@@ -180,7 +183,6 @@ metadata <- checkForMetadata(opt$metadata)
 if(opt$timetree=="Y") {
   # If re-running and lsd2 results already exist in working directory, read them in here
   sts <- metadata$DATE
-  sts <- metadata$ATE
   sts <- setNames(sts, metadata$ID)
   sts <- metadata$DATE[names(sts) %in% sub_tree$tip.label]
   
@@ -269,12 +271,17 @@ define.clades <- function(sub_tree) {
     #    stop()
     sub_tree$node.label = rep(100, sub_tree$Nnode)
   }
-  
+  sub_tree$node.label[is.na(sub_tree$node.label)] = 100 # Need to account for unsuuported branches owing to multifurcations
+    
   family_tree <- suppressWarnings(tidytree::as_tibble(sub_tree))
   ## Need to relabel columns so that "parent" and "node" are "from" and "to" for familyR::get_children function
   colnames(family_tree)[1:2] <- c("from", "to")
   ## The dataframe needs to be transformed back into a data.table for future analyses
   family_tree <- data.table::as.data.table(family_tree)
+  family_tree = familyR::get_children(family_tree, getMRCA(sub_tree, sub_tree$tip.label)) 
+  family_tree <-  merge(family_tree$edges,family_tree$nodes, by.x = "to", by.y = "id") %>%
+   dplyr::rename(root_level=level)
+  
   assign("family_tree", family_tree, envir = globalenv())
   
   supported_nodes <- list()
@@ -328,7 +335,7 @@ merge.nested.clust <- function(clusters) {
   for (ct in seq_along(clusters)) {
     for (cc in seq_along(copy)) {
       if (isTRUE(all(clusters[[ct]]$to %in% copy[[cc]]$to) &
-                 length(clusters[[ct]]$to) != length(copy[[cc]]$to))) {
+                 names(clusters)[ct] != names(copy)[cc])) {
         unwanted[[ct]] <- clusters[[ct]]
       } else{NULL}
     }# End loop along copy
@@ -339,7 +346,7 @@ merge.nested.clust <- function(clusters) {
   }
   return(result)
 }  
-merge.overlap.clust <- function(clusters) {
+find.overlap.clust <- function(clusters) {
   copy <- clusters
   unwanted <- list()
   result <- list()
@@ -348,7 +355,7 @@ merge.overlap.clust <- function(clusters) {
        if (isTRUE(sum(copy[[cc]]$to %in% clusters[[ct]]$to) > 0.01*length(copy[[cc]]$to)) &
           isTRUE(names(copy)[[cc]] != names(clusters)[[ct]])) {
         unwanted[[cc]] <- copy[[cc]]
-        clusters[[ct]] <- dplyr::full_join(copy[[cc]], clusters[[ct]], by=c("from", "to", "branch.length", "label"))
+        clusters[[ct]] <- dplyr::inner_join(copy[[cc]], clusters[[ct]], by=c("from", "to", "branch.length", "label"))
       } else{clusters[[ct]] <- clusters[[ct]]}
     } # End loop along copy
   }# End loop along true
@@ -360,26 +367,9 @@ merge.overlap.clust <- function(clusters) {
     unique()
   
   return(result)
-}  # In case you want to remove this and consider only fully nested clusters
-branchLengthLimit <- function(tree, threshold) {
+}  # There is overlap at times, which may want to be considered separately
+branchLengthLimit <- function(tree, threshold, root_level) {
   p.dist.mat.leaves <- cophenetic(tree)
-  ## Alternative distance matrix
-  # if(isTRUE(length(tree$tip.label) >= 10000)){
-  #   sample_leaves <- sample(tree$tip.label, 10000)
-  #   leaves_grid <- expand.grid(sample_leaves, sample_leaves)
-  #   p.dist.leaves <- sapply(seq_len(nrow(leaves_grid)), ## Create list of all pairwise combinations of IDs using expand.grid()
-  #                         function(k) { #future_sapply actually slower here!
-  #                           i <- leaves_grid[k,1]
-  #                           j <- leaves_grid[k,2]
-  #                           fastDist(tree, i,j)
-  #                         })
-  #   p.dist.mat.leaves <- matrix(p.dist.leaves,
-  #                             nrow=length(sample_leaves), ncol=length(sample_leaves),
-  #                             dimnames=list(sample_leaves,sample_leaves))
-  # } else  {
-  #  p.dist.mat.leaves <- cophenetic(tree)
-  #}
-
   get.node.leaf.MPPD <- function(node,tree,distmat){
     nlist <- geiger::tips(tree,node)
     foo <- distmat[nlist,nlist]
@@ -429,27 +419,27 @@ branchLengthLimit <- function(tree, threshold) {
   
   ## Create a vector of MPPDs for plotting and determining branch length limit
   if(isTRUE(opt$cluster=="b")) {
-    distvec <- pdist.clusttree(tree, mode='all')
+    distvec <- pdist.clusttree(tree, mode='all') %>%
+      filter(node_num %in% family_tree$to[family_tree$root_level<=root_level])
   } else {
     distvec <- pdist.clusttree(tree, mode='leaf')
     ## Determine MPPDs for all well-supported clades
     clade_MPPD <- pdist.clades(clades, tree, mode='leaf')
     assign("clade_MPPD", clade_MPPD, envir=globalenv())
   }
-  hist(distvec$MPPD)
+#  hist(distvec$MPPD)
   
   optimizeThreshold <- function(distvec, threshold) {
     if (isTRUE(threshold=="median")) {
-      bl <- runif(100, 0, median(distvec$MPPD))
+      bl <- runif(10, 0, median(distvec$MPPD))
     } else {
-      if (isTRUE(as.numeric(threshold)==0.01)) {
-        bl <- quantile(distvec$MPPD, as.numeric(threshold))
-      } else {
-        bl <- runif(round(as.numeric(threshold)*10), 0, as.numeric(quantile(distvec$MPPD, as.numeric(threshold))))
+      # if (isTRUE(as.numeric(threshold)==0.01)) {
+      #   bl <- quantile(distvec$MPPD, as.numeric(threshold))
+      # } else {
+      #   bl <- runif(round(as.numeric(threshold)*10), 0, as.numeric(quantile(distvec$MPPD, as.numeric(threshold))))
+      bl <- as.numeric(quantile(distvec$MPPD, as.numeric(threshold)))
       }
-    }
-    
-    bl <- bl[order(bl)]
+#    bl <- bl[order(bl)]
     
     return(bl)
   } # End function
@@ -459,6 +449,11 @@ branchLengthLimit <- function(tree, threshold) {
   return(branch_length_limit)
   
 } # End branchlenghlimit function
+
+branch_length_limits = data.frame(limit=do.call(rbind, 
+                                                   lapply(1:max(family_tree$root_level), function(x) {
+                                                     branchLengthLimit(sub_tree, opt$threshold, x)})),
+                                     root_level=1:max(family_tree$root_level))
 
 ## Singleton nodes are likely, so will need original nodes to map onto tree (above), but will need to force bifurcation
 ## for analysis by removing intermediate, lonely node.  
@@ -488,37 +483,43 @@ bifurcate <- function(tree, clusters) {
 
 print("Determining branch length limit....")
 
-branch_length_limit <- branchLengthLimit(sub_tree, opt$threshold)
 
 if (opt$cluster == "b") {
   print("DYNAMITE's branchwise algorithm is being used.")
-  branchWise <- function(tree, limit) {
+  branchWise <- function(tree, threshood, root_level) {
     
-    pickClust <- function(clade, limit){
+    pickClust <- function(clade, threshold, root_level){
+      
       
       ## Need to add mean_bl column  to original clade list
       clade$mean_bl <- rep(Inf, nrow(clade))
       clade$DATE <- do.call(rbind, invisible(mclapply(1:nrow(clade), function(i) {
-        if(clade$label[i] %in% sub_tree$tip.label) {
-          decimal_date(metadata$DATE[which(metadata$ID==clade$label[i])])
+        if(isTRUE(clade$label[i] %in% sub_tree$tip.label)) {
+          as.data.frame(metadata$DATE[which(metadata$ID==clade$label[i])])
         } else{
           NA
         }
       }, mc.cores=numCores)))
-      clade$mean_pwdate <- rep(NA, nrow(clade)) ################################################
+      #  clade$mean_pwdate <- rep(NA, nrow(clade)) ################################################
       
       
       ## Creating matrix for pairwise differences in dates
+      
       dates <- setNames(clade$DATE[!is.na(clade$DATE)], clade$label[!is.na(clade$DATE)])
+      dates = decimal_date(dates)
       pw_date_mat <- as.matrix(dist(dates))
       pw_date_mat[lower.tri(pw_date_mat)] <- NA
+      diag(pw_date_mat) <- NA
+      
       
       ## Set initial values
       current_level <- as.numeric(2)
       
+      root_level=unique(clade$root_level[clade$level==1])
+      branch_length_limit <- branch_length_limits$limit[branch_length_limits$root_level==root_level]
       ## Initiate subclade using first two edges connected to root of clade (level=1)
       sub_clade <- dplyr::filter(clade, level==1,
-                          branch.length <= limit)
+                                 branch.length <= branch_length_limit)
       
       if (nrow(sub_clade) > 0) {
         while(isTRUE(current_level <= max(clade$level))){
@@ -527,7 +528,7 @@ if (opt$cluster == "b") {
           # Each iteration chooses amongst nodes that are connected to the current sub-clade:
           
           next_level_nodes <- dplyr::filter(clade, level == current_level,
-                                     from %in% sub_clade$to)
+                                            from %in% sub_clade$to)
           
           # A shortlist of possible enlargements of the sub-clade is kept to be able
           # to compare each potential enlargement of the sub-clade and always keep the enlargement
@@ -538,10 +539,6 @@ if (opt$cluster == "b") {
           #  2) not already IN the sub_clade
           new_node <- dplyr::setdiff(next_level_nodes, sub_clade) 
           sub_clade <- rbind(sub_clade,new_node, fill=T)
-          
-          tmp_date_mat <- as.matrix(pw_date_mat[rownames(pw_date_mat) %in% sub_clade$label, colnames(pw_date_mat) %in% sub_clade$label])
-          colnames(tmp_date_mat) <- colnames(pw_date_mat)[colnames(pw_date_mat) %in% sub_clade$label]
-          rownames(tmp_date_mat) <- rownames(pw_date_mat)[rownames(pw_date_mat) %in% sub_clade$label]
           
           
           # The branch length is NOT calculated by the branch length of an individual
@@ -554,23 +551,16 @@ if (opt$cluster == "b") {
             } else{
               node_path <- nodepath(sub_tree, sub_clade$from[1], sub_clade$to[x])
               sub_clade$mean_bl[x] <- mean(sub_clade$branch.length[sub_clade$from %in% node_path & sub_clade$to %in% node_path])
-              ####### Old method where all branches in previous level used ######################################################################################################3
-              # sub_clade$mean_bl[x] <- sum(c(sub_clade$branch.length[x],
-              #                               subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))/
-              #   length(c(sub_clade$branch.length[x],
-              #            subset(sub_clade$branch.length, sub_clade$level < sub_clade$level[x])))
-              if(sub_clade$label[x] %in% sub_tree$tip.label) {
-                n <- match(sub_clade$label[x],colnames(tmp_date_mat))
-                sub_clade$mean_pwdate[x] <- sum(tmp_date_mat[1:n,1:n], na.rm=T)/n*(n-1)
-              } else {
-                sub_clade$mean_pwdate[x] <- NA
-              }
             }
           } # End for loop
           
           # Identify nodes with mean branch length > current mean branch length limit
           # and remove from shortlist
-          unwanted_edges_at_current_level <- dplyr::filter(sub_clade, level==current_level, mean_bl > limit | mean_pwdate >= opt$serial/365)
+          root_level=max(sub_clade$root_level)
+          branch_length_limit <- branch_length_limits$limit[branch_length_limits$root_level==root_level]
+          
+          unwanted_edges_at_current_level <- dplyr::filter(sub_clade, level==current_level, mean_bl > branch_length_limit)
+          
           sub_clade <- dplyr::setdiff(sub_clade, unwanted_edges_at_current_level)
           
           ## Redefine current level and mean branch length, taking into account whether
@@ -583,13 +573,23 @@ if (opt$cluster == "b") {
           } # End ifelse statement
           
         } # End tree traversal (while loop)
-      }else {
+        
+        for (x in 1:nrow(sub_clade)) {
+          if(sub_clade$label[x] %in% sub_tree$tip.label) {
+            sub_clade$mean_pwdate[x] = mean(pw_date_mat[,colnames(pw_date_mat) == sub_clade$label[x]], na.rm=T)
+          } else {
+            sub_clade$mean_pwdate[x] <- NA
+          } # end if-else statement
+        } # end for loop 
+        
+        sub_clade = dplyr::filter(sub_clade, mean_pwdate <= opt$serial/365)
+      } else {
         sub_clade <- NULL
       }
       return(sub_clade)
     } # End pickClust function
     clades <- mclapply(clades, function(x) {
-      if(nrow(x) >=8) {
+      if(nrow(x) >=5) {
         x <- x
       } else {
         x <- NULL
@@ -603,42 +603,31 @@ if (opt$cluster == "b") {
     if(length(true_cluster_nodes) ==0) {
       true_cluster_nodes <- NULL
     } else {
-      true_cluster_nodes <- merge.nested.clust(true_cluster_nodes) %>%
-        merge.overlap.clust() %>%
-        merge.nested.clust()
+     names(true_cluster_nodes) = paste0("c", seq(1,length(true_cluster_nodes),1))
       
-      true_cluster_nodes <-  list.filter(true_cluster_nodes, sum(label %in% tree$tip.label) >= 5) # Cilter clusters to those containing 5 individuals
+     true_cluster_nodes <- merge.nested.clust(true_cluster_nodes) 
+ #       merge.overlap.clust() %>%
+#        merge.nested.clust()
+      
+      true_cluster_nodes <-  list.filter(true_cluster_nodes, sum(label %in% tree$tip.label) >= 3) # filter clusters to those containing 5 individuals
       true_cluster_nodes <- mclapply(true_cluster_nodes, function(x) dplyr::rename(x, parent=from, node=to),
                                      mc.cores=numCores)
+      
+      for (j in seq_along(true_cluster_nodes)) {
+        names(true_cluster_nodes)[[j]] <- paste0("c", j)
+      }
       
     } # End if statement
     return(true_cluster_nodes)
   } # End branchwise function
-  .possible_clusters <- mclapply(branch_length_limit, 
-                                function(x) branchWise(sub_tree, x), mc.cores=numCores) %>%
+  .possible_clusters <- branchWise(sub_tree, x) %>%
     plyr::compact()
-  .nclust <- mclapply(.possible_clusters, length, mc.cores=numCores)
-  .best <- suppressWarnings(max(do.call("rbind", .nclust)))
-  true_cluster_nodes <- .possible_clusters[which(.nclust==.best)]
-  branch_length_limit <- branch_length_limit[which(.nclust==.best)]
   
-  if (length(true_cluster_nodes)>1) {
-    true_cluster_nodes <- last(true_cluster_nodes)
-    branch_length_limit <- last(branch_length_limit)
-  } else {
-    if (length(true_cluster_nodes)==0) {
-      true_cluster_nodes <- NULL
-    } else {
-      true_cluster_nodes <- true_cluster_nodes[[1]]
-    }
-  }
-  
-  if(is.null(true_cluster_nodes)) {
-    clusters <- NULL
+  if(length(.possible_clusters)==0) {
     print("No clusters found.") 
     stop()
   } else {
-    clusters <- bifurcate(sub_tree, true_cluster_nodes)
+    clusters <- bifurcate(sub_tree, .possible_clusters)
     clusters <- mclapply(clusters, as_tibble, mc.cores=numCores)
   }
 
@@ -657,7 +646,7 @@ if (opt$cluster == "b") {
         merge.overlap.clust() %>% 
         merge.nested.clust()
       
-      clusters <-  list.filter(clusters, sum(label %in% tree$tip.label) >= 5)
+      clusters <-  list.filter(clusters, sum(label %in% tree$tip.label) >= 3)
       # for (j in seq_along(clusters)) {
       #   names(clusters)[[j]] <- paste0("c", j)
       # }
@@ -680,7 +669,9 @@ if (opt$cluster == "b") {
     clusters <- mclapply(clusters, function(x) dplyr::rename(x, parent=from, node=to), mc.cores=numCores)
     branch_length_limit <- branch_length_limit[which(.nclust==.best)]
     
-  } else stop("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")}
+  } else {
+    stop("Incorrect cluster_picking algorithm choice. Please choose between 'b' (branch-wise) or 'c' (clade-wise) and run script again.")}
+}
 
 
 
@@ -875,12 +866,12 @@ if (class(clusters) == "data.frame") {
       
       for (i in seq_along(clusters)) {
         clusters[[i]]$ID <- clusters[[i]]$label
-        cluster_data[[i]] <- left_join(clusters[[i]], metadata2, by="ID") %>%
+        cluster_data[[i]] <- dplyr::left_join(clusters[[i]], metadata2, by=c("ID", "DATE")) %>%
           dplyr::select(parent, node, ID, DATE, field, trait)
       }
     background_data <- data.frame(ID=background_sub_tree$tip.label) %>%
       left_join(., metadata2, by="ID") %>%
-      left_join(., select(family_tree, label, from, to) %>% rename(ID=label) , by="ID") %>%
+      left_join(., dplyr::select(family_tree, label, from, to) %>% rename(ID=label) , by="ID") %>%
       rename(parent=from, node=to) %>%
       mutate(cluster_id="Background")
     assign("background_data", background_data, envir = globalenv())
@@ -923,12 +914,10 @@ suppressWarnings(cluster_data <- connectClust(sub_tree, cluster_data))
 # are actually better predictors of cluster dynamics
 
 calculatePD <- function(tree) {
-  tree <- multi2di(tree)
   pd <- sum(tree$edge.length)
   return(pd)
 }
 calculateOster <- function(tree) {
-  tree <- multi2di(tree)  
   cluster_size <- length(tree$tip.label)-1
   sum_heights <- sum(phytools::nodeHeights(tree))
   longest <- max(phytools::nodeHeights(tree))
@@ -1121,13 +1110,12 @@ gatherStats <- function() {
   return(cluster_dynamics)
 
 }
-
 cluster_tree_stats <- gatherStats()
 
 # Need to merge tree_stats with ASR data
 
 cluster_data <- dplyr::bind_rows(cluster_data, .id = "cluster_id") %>%
-  full_join(., background_data, by=c("cluster_id", "parent", "node", "ID", "DATE", "field", "trait")) %>%
+  dplyr::full_join(., background_data, by=c("cluster_id", "parent", "node", "ID", "DATE", "field", "trait")) %>%
   dplyr::filter(!is.na(DATE))
 
   
@@ -1158,12 +1146,13 @@ if (isTRUE(exists("time_tree", envir = globalenv()))) {
 tree_name=basename(opt$tree)
 write("Data are now being exported as 'cluster_info_<tree>.RDS' and 'dynamite_<tree>.tree.'")
 
-cluster_data = sapply(cluster_data, function(x) gsub(',', ' ', x)) # Removing any unwanted commas!
-write.csv(select(cluster_data, -parent, -node), paste0("dynamite_trait_distributions_", tree_name, ".csv"), quote=F, row.names=F)
+cluster_data = data.frame(lapply(cluster_data, function(x) {
+                 gsub(",", " ", x)   })) # Remove all commas in order to export as csv
+
+write.csv(dplyr::select(cluster_data, -parent, -node), paste0("dynamite_trait_distributions_", tree_name, ".csv"), quote=F, row.names=F)
 write.csv(cluster_tree_stats, paste0("dynamite_tree_stats_", tree_name, ".csv"), quote=F, row.names=F)
 
-#write.csv(cluster_tree_stats, paste0("tree_stats_", opt$tree, ".csv"))
-write.table(branch_length_limit, paste0("branch_length_limit_", tree_name, ".txt"), row.names=F, col.names = F)
+write.table(branch_length_limits, paste0("branch_length_limits_", tree_name, ".txt"), row.names=F, col.names = F)
 write.beast(annotated_subtree, paste0("dynamite_subtree_", tree_name, ".tree")) #### NEED THIS OUTPUT####################################
 
 if (isTRUE(exists("time_tree", envir = globalenv()))) {
