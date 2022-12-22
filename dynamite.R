@@ -450,10 +450,6 @@ branchLengthLimit <- function(tree, threshold, root_level) {
   
 } # End branchlenghlimit function
 
-branch_length_limits = data.frame(limit=do.call(rbind, 
-                                                   lapply(1:max(family_tree$root_level), function(x) {
-                                                     branchLengthLimit(sub_tree, opt$threshold, x)})),
-                                     root_level=1:max(family_tree$root_level))
 
 ## Singleton nodes are likely, so will need original nodes to map onto tree (above), but will need to force bifurcation
 ## for analysis by removing intermediate, lonely node.  
@@ -486,18 +482,31 @@ print("Determining branch length limit....")
 
 if (opt$cluster == "b") {
   print("DYNAMITE's branchwise algorithm is being used.")
+  branch_length_limits = data.frame(limit=do.call(rbind, 
+                                                  mclapply(1:max(family_tree$root_level), function(x) {
+                                                    branchLengthLimit(sub_tree, opt$threshold, x)}, mc.cores=numCores)),
+                                    root_level=1:max(family_tree$root_level))
   branchWise <- function(tree, threshood, root_level) {
     
+    clades <- mclapply(clades, function(x) {
+      if(nrow(x) >=5) {
+        x <- x
+      } else {
+        x <- NULL
+      }
+      return(x)
+    }, mc.cores=numCores) %>%
+      plyr::compact() ## Filter search to only clades with at least 5 sampled individuals
     pickClust <- function(clade, threshold, root_level){
       
       
       ## Need to add mean_bl column  to original clade list
       clade$mean_bl <- rep(Inf, nrow(clade))
-      clade$DATE <- do.call(rbind, invisible(mclapply(1:nrow(clade), function(i) {
+      clade$DATE <- as.Date(do.call(rbind, mclapply(1:nrow(clade), function(i) {
         if(isTRUE(clade$label[i] %in% sub_tree$tip.label)) {
-          as.data.frame(metadata$DATE[which(metadata$ID==clade$label[i])])
+          return(as.character(metadata$DATE[which(metadata$ID==clade$label[i])]))
         } else{
-          NA
+          return(as.character(NA))
         }
       }, mc.cores=numCores)))
       #  clade$mean_pwdate <- rep(NA, nrow(clade)) ################################################
@@ -588,15 +597,6 @@ if (opt$cluster == "b") {
       }
       return(sub_clade)
     } # End pickClust function
-    clades <- mclapply(clades, function(x) {
-      if(nrow(x) >=5) {
-        x <- x
-      } else {
-        x <- NULL
-      }
-      return(x)
-    }, mc.cores=numCores) %>%
-      plyr::compact() ## Filter search to only clades with at least 5 sampled individuals
     true_cluster_nodes <- mclapply(clades, function(x) pickClust(x, limit), mc.cores=numCores) %>%
       plyr::compact()
     
@@ -634,6 +634,7 @@ if (opt$cluster == "b") {
 } else {
   if (opt$cluster == "c") {
     print("DYNAMITE's cladewise algorithm (Phylopart) is being used.")
+    branch_length_limits = branchLengthLimit(sub_tree, opt$threshold, max(family_tree$root_level))
     phylopart <- function(tree, limit) {
       clusters <- list()
       for(clade in seq_along(clades)) {
